@@ -1,312 +1,313 @@
 /* =========================================================
-   Bayansell — store (localStorage layer)
-   Exposes global: Store
+   Bayansell — store (Supabase Cloud Layer)
    ========================================================= */
 
 var Store = (function () {
-  var LISTINGS_KEY = "bayansell:listings:v1";
-  var FAVORITES_KEY = "bayansell:favorites:v1";
-  var USER_KEY = "bayansell:user:v1";
-  var INQUIRIES_KEY = "bayansell:inquiries:v1";
-
-  function read(key, fallback) {
+  
+  // Internal helper to get current session user
+  async function getSessionUser() {
     try {
-      var raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
+      const { data: { user } } = await window.supabaseClient.auth.getUser();
+      if (!user) return null;
+      
+      // Get profile role
+      const { data: profile } = await window.supabaseClient
+        .from('profiles')
+        .select('full_name, role')
+        .eq('id', user.id)
+        .single();
+        
+      return {
+        id: user.id,
+        email: user.email,
+        name: profile ? profile.full_name : user.user_metadata.full_name || 'User',
+        role: profile ? profile.role : 'buyer'
+      };
     } catch (e) {
-      console.warn("Bayansell: could not read", key, e);
-      return fallback;
-    }
-  }
-
-  function write(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch (e) {
-      console.warn("Bayansell: could not write", key, e);
-      return false;
+      return null;
     }
   }
 
   /* ---------- Listings ---------- */
 
-  // User-posted listings (most recent first).
-  function getUserListings() {
-    var listings = read(LISTINGS_KEY, []);
-    // Ensure all listings have mock engagement fields
-    var updated = false;
-    listings.forEach(function(l) {
-      if (l.views === undefined) {
-        l.views = Math.floor(Math.random() * 150) + 10;
-        l.inquiries = Math.floor(l.views * (Math.random() * 0.15));
-        updated = true;
-      }
-    });
-    if (updated) write(LISTINGS_KEY, listings);
-    return listings;
-  }
-
-  // All listings: user posts first, then seed data.
-  function getAllListings() {
-    return getUserListings().concat(SEED_LISTINGS);
-  }
-
-  function getById(id) {
-    var all = getAllListings();
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].id === id) return all[i];
+  async function getAllListings() {
+    // We include seed data for now if DB is empty, or merge them.
+    // In a real migration, we'd seed the DB once.
+    const { data, error } = await window.supabaseClient
+      .from('listings')
+      .select('*, profiles(full_name)')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error("Supabase error:", error);
+      return SEED_LISTINGS; 
     }
-    return null;
+    
+    const dbListings = data.map(l => ({
+      id: l.id,
+      title: l.title,
+      category: l.category,
+      price: Number(l.price),
+      condition: l.condition,
+      location: l.location,
+      description: l.description,
+      images: l.images || [],
+      seller: { name: l.profiles?.full_name || 'Anonymous' },
+      postedAt: l.created_at,
+      views: l.views || 0,
+      inquiries: l.inquiries_count || 0,
+      isMine: false // Will be updated in UI if matches current user
+    }));
+
+    return dbListings.concat(SEED_LISTINGS);
   }
 
-  function addListing(data) {
-    var listing = {
-      id: "user-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+  async function getUserListings() {
+    const user = await getSessionUser();
+    if (!user) return [];
+
+    const { data, error } = await window.supabaseClient
+      .from('listings')
+      .select('*, profiles(full_name)')
+      .eq('seller_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return [];
+    return data.map(l => ({
+      id: l.id,
+      title: l.title,
+      category: l.category,
+      price: Number(l.price),
+      condition: l.condition,
+      location: l.location,
+      description: l.description,
+      images: l.images || [],
+      seller: { name: user.name },
+      postedAt: l.created_at,
+      views: l.views || 0,
+      inquiries: l.inquiries_count || 0,
+      isMine: true
+    }));
+  }
+
+  async function getById(id) {
+    if (String(id).startsWith('seed-')) {
+      return SEED_LISTINGS.find(l => l.id === id) || null;
+    }
+
+    const { data, error } = await window.supabaseClient
+      .from('listings')
+      .select('*, profiles(full_name)')
+      .eq('id', id)
+      .single();
+    
+    if (error) return null;
+    const user = await getSessionUser();
+
+    return {
+      id: data.id,
       title: data.title,
       category: data.category,
       price: Number(data.price),
       condition: data.condition,
       location: data.location,
       description: data.description,
-      images: data.images && data.images.length ? data.images : [],
-      seller: { name: (getUser() && getUser().name) || "You" },
-      isMine: true,
-      postedAt: new Date().toISOString(),
-      views: 0,
-      inquiries: 0
+      images: data.images || [],
+      seller: { name: data.profiles?.full_name || 'Anonymous' },
+      postedAt: data.created_at,
+      views: data.views || 0,
+      inquiries: data.inquiries_count || 0,
+      isMine: user ? data.seller_id === user.id : false
     };
-    var listings = read(LISTINGS_KEY, []);
-    listings.unshift(listing);
-    var ok = write(LISTINGS_KEY, listings);
-    if (!ok) {
-      throw new Error(
-        "Storage is full — try removing an image or posting fewer photos."
-      );
-    }
+  }
+
+  async function addListing(data) {
+    const user = await getSessionUser();
+    if (!user) throw new Error("Log in to post.");
+
+    const { data: listing, error } = await window.supabaseClient
+      .from('listings')
+      .insert([{
+        seller_id: user.id,
+        title: data.title,
+        category: data.category,
+        price: Number(data.price),
+        condition: data.condition,
+        location: data.location,
+        description: data.description,
+        images: data.images
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
     return listing;
   }
 
-  function updateListing(id, data) {
-    var listings = read(LISTINGS_KEY, []);
-    var idx = -1;
-    for (var i = 0; i < listings.length; i++) {
-      if (listings[i].id === id) { idx = i; break; }
-    }
-    if (idx === -1) return null;
-    
-    var original = listings[idx];
-    listings[idx] = {
-      ...original,
-      title: data.title,
-      category: data.category,
-      price: Number(data.price),
-      condition: data.condition,
-      location: data.location,
-      description: data.description,
-      images: data.images && data.images.length ? data.images : original.images
-    };
-    
-    write(LISTINGS_KEY, listings);
-    return listings[idx];
+  async function updateListing(id, data) {
+    const { error } = await window.supabaseClient
+      .from('listings')
+      .update({
+        title: data.title,
+        category: data.category,
+        price: Number(data.price),
+        condition: data.condition,
+        location: data.location,
+        description: data.description,
+        images: data.images
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
   }
 
-  function deleteListing(id) {
-    var listings = read(LISTINGS_KEY, []).filter(function (l) {
-      return l.id !== id;
+  async function deleteListing(id) {
+    const { error } = await window.supabaseClient
+      .from('listings')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  }
+
+  /* ---------- Auth ---------- */
+
+  async function login(email, password) {
+    // Simplification: In a real app, use Supabase Auth UI or proper fields
+    const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+      email,
+      password,
     });
-    write(LISTINGS_KEY, listings);
-    // also drop it from favorites if present
-    var favs = getFavorites().filter(function (f) {
-      return f !== id;
-    });
-    write(FAVORITES_KEY, favs);
-    
-    // Also clean up inquiries
-    var inqs = read(INQUIRIES_KEY, []);
-    var filteredInqs = inqs.filter(function(i) { return i.listingId !== id; });
-    write(INQUIRIES_KEY, filteredInqs);
+    if (error) throw error;
+    return data.user;
   }
 
-  /* ---------- Inquiries / Messaging ---------- */
-
-  var MOCK_QUESTIONS = [
-    "Hi, is this still available?",
-    "Can we meet at Newport City?",
-    "Is the price negotiable?",
-    "I'm interested. What's the last price?",
-    "Does it come with the box?",
-    "When can I pick this up?",
-    "Is there any defect?",
-    "Still available?"
-  ];
-  
-  var MOCK_NAMES = ["Juan", "Maria", "Jerome", "Alyssa", "Kevin", "Patricia", "Mark"];
-
-  function getInquiries() {
-    var inqs = read(INQUIRIES_KEY, []);
-    var listings = getUserListings();
-    
-    // If we have listings but no inquiries, generate some mock ones
-    if (listings.length > 0 && inqs.length === 0) {
-      listings.forEach(function(l) {
-        var count = Math.floor(Math.random() * 3) + 1;
-        for (var i = 0; i < count; i++) {
-          var id = "inq-" + Math.random().toString(36).slice(2, 9);
-          var name = MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
-          inqs.push({
-            id: id,
-            listingId: l.id,
-            listingTitle: l.title,
-            buyerName: name,
-            messages: [
-              { sender: "buyer", text: MOCK_QUESTIONS[Math.floor(Math.random() * MOCK_QUESTIONS.length)], time: new Date(Date.now() - Math.random() * 86400000).toISOString() }
-            ]
-          });
-        }
-      });
-      write(INQUIRIES_KEY, inqs);
-    }
-    
-    // Sort inquiries by latest message time
-    inqs.sort(function(a, b) {
-      var timeA = new Date(a.messages[a.messages.length - 1].time);
-      var timeB = new Date(b.messages[b.messages.length - 1].time);
-      return timeB - timeA;
-    });
-    
-    return inqs;
+  async function logout() {
+    await window.supabaseClient.auth.signOut();
   }
 
-  function sendMessage(inquiryId, text) {
-    var inqs = read(INQUIRIES_KEY, []);
-    var idx = -1;
-    for (var i = 0; i < inqs.length; i++) {
-      if (inqs[i].id === inquiryId) { idx = i; break; }
-    }
-    if (idx === -1) return;
-
-    inqs[idx].messages.push({
-      sender: "seller",
-      text: text,
-      time: new Date().toISOString()
-    });
-    write(INQUIRIES_KEY, inqs);
-
-    // Auto-reply
-    var replies = ["Alright sweet!", "Got it, thanks!", "Sure, deal", "Sounds good.", "Okay, see you then!", "Thanks for the info."];
-    setTimeout(function() {
-      var freshInqs = read(INQUIRIES_KEY, []);
-      var freshIdx = -1;
-      for (var j = 0; j < freshInqs.length; j++) {
-        if (freshInqs[j].id === inquiryId) { freshIdx = j; break; }
-      }
-      if (freshIdx !== -1) {
-        freshInqs[freshIdx].messages.push({
-          sender: "buyer",
-          text: replies[Math.floor(Math.random() * replies.length)],
-          time: new Date().toISOString()
-        });
-        write(INQUIRIES_KEY, freshInqs);
-        // Dispatch event for UI update if on dashboard
-        window.dispatchEvent(new CustomEvent('bayansell:new-message', { detail: { inquiryId: inquiryId } }));
-      }
-    }, 2500);
-  }
-
-  /* ---------- Auth (mock) ---------- */
-
-  function getUser() {
-    var user = read(USER_KEY, null);
-    if (user && !user.role) {
-      user.role = "buyer";
-    }
-    return user;
-  }
-
-  function setUser(user) {
-    if (user && !user.role) {
-      user.role = "buyer";
-    }
-    write(USER_KEY, user);
-    return user;
-  }
-
-  function logout() {
-    try {
-      localStorage.removeItem(USER_KEY);
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
-  function switchRole(role) {
-    var user = getUser();
-    if (user) {
-      user.role = role;
-      setUser(user);
-      return true;
-    }
-    return false;
+  async function switchRole(role) {
+    const user = await getSessionUser();
+    if (!user) return;
+    await window.supabaseClient
+      .from('profiles')
+      .update({ role: role })
+      .eq('id', user.id);
   }
 
   /* ---------- Favorites ---------- */
 
-  function getFavorites() {
-    return read(FAVORITES_KEY, []);
+  async function getFavorites() {
+    const user = await getSessionUser();
+    if (!user) return [];
+    const { data } = await window.supabaseClient
+      .from('favorites')
+      .select('listing_id')
+      .eq('user_id', user.id);
+    return (data || []).map(f => f.listing_id);
   }
 
-  function isFavorite(id) {
-    return getFavorites().indexOf(id) !== -1;
+  async function isFavorite(id) {
+    const user = await getSessionUser();
+    if (!user) return false;
+    const { data } = await window.supabaseClient
+      .from('favorites')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('listing_id', id)
+      .single();
+    return !!data;
   }
 
-  function toggleFavorite(id) {
-    var favs = getFavorites();
-    var idx = favs.indexOf(id);
-    var nowFav;
-    if (idx === -1) {
-      favs.push(id);
-      nowFav = true;
+  async function toggleFavorite(id) {
+    const user = await getSessionUser();
+    if (!user) throw new Error("Log in to save items.");
+    
+    const favId = await isFavorite(id);
+    if (favId) {
+      await window.supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('listing_id', id);
+      return false;
     } else {
-      favs.splice(idx, 1);
-      nowFav = false;
+      await window.supabaseClient.from('favorites').insert([{ user_id: user.id, listing_id: id }]);
+      return true;
     }
-    write(FAVORITES_KEY, favs);
-    return nowFav;
   }
 
-  function favoriteCount() {
-    return getFavorites().length;
+  async function favoriteCount() {
+    const favs = await getFavorites();
+    return favs.length;
   }
 
-  // Favorite listings, in the order they were saved (newest first).
-  function getFavoriteListings() {
-    var favs = getFavorites();
-    var out = [];
-    for (var i = favs.length - 1; i >= 0; i--) {
-      var l = getById(favs[i]);
-      if (l) out.push(l);
-    }
-    return out;
+  async function getFavoriteListings() {
+    const user = await getSessionUser();
+    if (!user) return [];
+    
+    const { data } = await window.supabaseClient
+      .from('favorites')
+      .select('listings(*, profiles(full_name))')
+      .eq('user_id', user.id);
+      
+    return (data || []).map(f => {
+      const l = f.listings;
+      return {
+        ...l,
+        seller: { name: l.profiles?.full_name || 'Anonymous' },
+        postedAt: l.created_at
+      };
+    });
+  }
+
+  /* ---------- Messaging ---------- */
+  
+  async function getInquiries() {
+    const user = await getSessionUser();
+    if (!user) return [];
+    
+    const { data } = await window.supabaseClient
+      .from('inquiries')
+      .select('*, listings(title), messages(*)')
+      .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+      .order('updated_at', { ascending: false });
+      
+    return (data || []).map(i => ({
+      id: i.id,
+      listingId: i.listing_id,
+      listingTitle: i.listings?.title || 'Unknown Item',
+      buyerName: 'Buyer', // In real app, fetch profile
+      messages: i.messages.map(m => ({
+        sender: m.sender_id === user.id ? 'me' : 'them',
+        text: m.content,
+        time: m.created_at
+      }))
+    }));
+  }
+
+  async function sendMessage(inquiryId, text) {
+     const user = await getSessionUser();
+     if (!user) return;
+     await window.supabaseClient.from('messages').insert([{
+       inquiry_id: inquiryId,
+       sender_id: user.id,
+       content: text
+     }]);
   }
 
   return {
-    getUserListings: getUserListings,
-    getAllListings: getAllListings,
-    getById: getById,
-    addListing: addListing,
-    updateListing: updateListing,
-    deleteListing: deleteListing,
-    getInquiries: getInquiries,
-    sendMessage: sendMessage,
-    getUser: getUser,
-    setUser: setUser,
-    logout: logout,
-    switchRole: switchRole,
-    getFavorites: getFavorites,
-    isFavorite: isFavorite,
-    toggleFavorite: toggleFavorite,
-    favoriteCount: favoriteCount,
-    getFavoriteListings: getFavoriteListings,
+    getUserListings,
+    getAllListings,
+    getById,
+    addListing,
+    updateListing,
+    deleteListing,
+    getInquiries,
+    sendMessage,
+    getUser: getSessionUser,
+    logout,
+    switchRole,
+    getFavorites,
+    isFavorite,
+    toggleFavorite,
+    favoriteCount,
+    getFavoriteListings,
   };
 })();
