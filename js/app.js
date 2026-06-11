@@ -358,13 +358,22 @@ window.FALLBACK_IMG =
   }
 
   function renderPost() {
-    if (!Store.getUser()) {
+    var user = Store.getUser();
+    if (!user) {
       app.innerHTML =
         '<div class="empty"><div class="emoji">🔐</div><h2>Log in to start selling</h2>' +
         "<p>Create an account or log in to post your item on Bayansell.</p>" +
         '<button class="btn btn-primary" type="button" data-action="login-inline">Log in or sign up</button></div>';
       return;
     }
+    if (user.role !== "seller") {
+      app.innerHTML =
+        '<div class="empty"><div class="emoji">💼</div><h2>Want to sell on Bayansell?</h2>' +
+        "<p>You are currently browsing as a buyer. Upgrade to a seller account to post listings.</p>" +
+        '<button class="btn btn-primary" type="button" data-action="upgrade-seller">Become a Seller</button></div>';
+      return;
+    }
+
     pendingImages = [];
     app.innerHTML =
       '<div class="form-page"><h1>Sell your item</h1>' +
@@ -609,6 +618,11 @@ window.FALLBACK_IMG =
         '<div class="field"><label for="auth-email">Email</label>' +
         '<input class="input" id="auth-email" type="email" placeholder="you@email.com" />' +
         '<div class="error-text" data-err="auth-email" hidden></div></div>' +
+        '<div class="field"><label for="auth-role">I want to...</label>' +
+        '<select class="select" id="auth-role">' +
+        '<option value="buyer">Buy and browse</option>' +
+        '<option value="seller">Sell items</option>' +
+        '</select></div>' +
         '<button class="btn btn-primary btn-block" type="submit">Continue</button>' +
         "</form>"
     );
@@ -616,12 +630,13 @@ window.FALLBACK_IMG =
       e.preventDefault();
       var name = document.getElementById("auth-name").value.trim();
       var email = document.getElementById("auth-email").value.trim();
+      var role = document.getElementById("auth-role").value;
       var ok = true;
       setFieldError("auth-name", name ? "" : "Please enter your name."); if (!name) ok = false;
       var emailOk = /.+@.+\..+/.test(email);
       setFieldError("auth-email", emailOk ? "" : "Please enter a valid email."); if (!emailOk) ok = false;
       if (!ok) return;
-      Store.setUser({ name: name, email: email });
+      Store.setUser({ name: name, email: email, role: role });
       closeModal();
       updateAuthUI();
       render();
@@ -644,9 +659,16 @@ window.FALLBACK_IMG =
       (favCount ? '<span class="menu-badge">' + favCount + "</span>" : "") +
       "</button>";
     if (user) {
+      var roleText = user.role === "seller" ? "Seller account" : "Buyer account";
+      var roleAction = user.role === "seller" ? "Switch to Buyer" : "Switch to Seller";
+      var nextRole = user.role === "seller" ? "buyer" : "seller";
+
       return (
         '<div class="menu-greeting"><strong>Hi, ' + esc(user.name.split(" ")[0]) + "</strong>" +
-        "<span>" + esc(user.email || "") + "</span></div>" +
+        "<span>" + esc(user.email || "") + "</span>" +
+        '<span style="font-size:11px;color:var(--rausch);font-weight:700;margin-top:4px;display:block">' + roleText + "</span></div>" +
+        '<div class="menu-sep"></div>' +
+        '<button class="menu-item" data-action="toggle-role" data-role="' + nextRole + '">' + roleAction + "</button>" +
         '<div class="menu-sep"></div>' +
         '<button class="menu-item bold" data-nav="#/my-listings">My listings</button>' +
         savedItem +
@@ -704,6 +726,14 @@ window.FALLBACK_IMG =
         '<button class="btn btn-primary" type="button" data-action="login-inline">Log in or sign up</button></div>';
       return;
     }
+    if (user.role !== "seller") {
+      app.innerHTML =
+        '<div class="empty"><div class="emoji">📦</div><h2>Manage your listings</h2>' +
+        "<p>Only sellers can post and manage listings. Upgrade your account to get started.</p>" +
+        '<button class="btn btn-primary" type="button" data-action="upgrade-seller">Become a Seller</button></div>';
+      return;
+    }
+
     var mine = Store.getUserListings();
     if (mine.length === 0) {
       app.innerHTML =
@@ -898,6 +928,15 @@ window.FALLBACK_IMG =
       var loginInline = e.target.closest('[data-action="login-inline"]');
       if (loginInline) { e.preventDefault(); openAuthModal(function () { render(); }); return; }
 
+      var upgrade = e.target.closest('[data-action="upgrade-seller"]');
+      if (upgrade) {
+        e.preventDefault();
+        Store.switchRole("seller");
+        toast("You are now a Seller! 💼");
+        render();
+        return;
+      }
+
       var tab = e.target.closest(".cat-tab");
       if (tab) { state.category = tab.getAttribute("data-cat"); render(); return; }
     });
@@ -983,15 +1022,22 @@ window.FALLBACK_IMG =
         var act = e.target.closest("[data-action]");
         if (act) {
           var a = act.getAttribute("data-action");
-          toggleAccountMenu(false);
           if (a === "login") {
+            toggleAccountMenu(false);
             openAuthModal();
           } else if (a === "logout") {
+            toggleAccountMenu(false);
             Store.logout();
             updateAuthUI();
             toast("You’ve been logged out");
             if (parseHash().name === "my-listings") location.hash = "#/";
             else render();
+          } else if (a === "toggle-role") {
+            var next = act.getAttribute("data-role");
+            Store.switchRole(next);
+            toggleAccountMenu(false);
+            toast("Account switched to " + (next === "seller" ? "Seller" : "Buyer"));
+            render();
           }
         }
       });

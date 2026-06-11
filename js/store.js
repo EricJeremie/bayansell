@@ -88,10 +88,17 @@ var Store = (function () {
   /* ---------- Auth (mock) ---------- */
 
   function getUser() {
-    return read(USER_KEY, null);
+    var user = read(USER_KEY, null);
+    if (user && !user.role) {
+      user.role = "buyer";
+    }
+    return user;
   }
 
   function setUser(user) {
+    if (user && !user.role) {
+      user.role = "buyer";
+    }
     write(USER_KEY, user);
     return user;
   }
@@ -102,6 +109,16 @@ var Store = (function () {
     } catch (e) {
       /* ignore */
     }
+  }
+
+  function switchRole(role) {
+    var user = getUser();
+    if (user) {
+      user.role = role;
+      setUser(user);
+      return true;
+    }
+    return false;
   }
 
   /* ---------- Favorites ---------- */
@@ -153,6 +170,7 @@ var Store = (function () {
     getUser: getUser,
     setUser: setUser,
     logout: logout,
+    switchRole: switchRole,
     getFavorites: getFavorites,
     isFavorite: isFavorite,
     toggleFavorite: toggleFavorite,
