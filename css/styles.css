@@ -831,13 +831,13 @@ img { display: block; max-width: 100%; }
 /* ---- Phones ---- */
 @media (max-width: 600px) {
 
-  /* (1) Always a 2-up grid — closes the old 481–519px "one giant column" gap */
+  /* (1) Single-column grid on phones — one card per row, full-width photos */
   .grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px 12px;
+    grid-template-columns: 1fr;
+    gap: 22px;
   }
-  .card-title { font-size: 14px; }
-  .card-price { font-size: 14px; }
+  .card-title { font-size: 15px; }
+  .card-price { font-size: 15px; }
   .toolbar {
     flex-direction: column;
     align-items: flex-start;
