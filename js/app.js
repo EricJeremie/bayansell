@@ -57,7 +57,8 @@ window.FALLBACK_IMG =
 
   function initials(name) {
     var parts = String(name || \"?\").trim().split(/\\s+/);
-    var s = parts[0][0] + (parts[1] ? parts[1][0] : \"\");
+    var s = parts[0] ? parts[0][0] : \"?\";
+    if (parts[1] && parts[1][0]) s += parts[1][0];
     return s.toUpperCase();
   }
 
@@ -197,7 +198,7 @@ window.FALLBACK_IMG =
       '<div class=\"detail-grid\"><div class=\"detail-left\">' +
       '<section class=\"detail-section\"><h2>Description</h2><div class=\"detail-desc\">' + esc(l.description) + '</div></section>' +
       '<section class=\"detail-section\"><h2>Item details</h2><div class=\"spec-list\">' + specHTML(\"Condition\", l.condition) + specHTML(\"Category\", l.category) + specHTML(\"Location\", l.location) + specHTML(\"Posted\", formatDateAbs(l.postedAt)) + \"</div></section>\" +
-      '<section class=\"detail-section\"><h2>Seller</h2><div class=\"seller-row\"><div class=\"seller-avatar\">' + esc(initials(l.seller.name)) + '</div><div><div class=\"seller-name\">' + esc(l.seller.name) + '</div><div class=\"seller-meta\">' + esc(sellerMeta) + '</div></div></div></section></div>' +
+      '<section class=\"detail-section\"><h2>Seller</h2><div class=\"seller-row\"><div class=\"seller-avatar\">' + esc(initials(l.seller ? l.seller.name : \"?\")) + '</div><div><div class=\"seller-name\">' + esc(l.seller ? l.seller.name : \"Anonymous\") + '</div><div class=\"seller-meta\">' + esc(sellerMeta) + '</div></div></div></section></div>' +
       '<aside class=\"detail-right\"><div class=\"price-card\"><div class=\"price\">' + formatPrice(l.price) + ' <small>· ' + esc(l.condition) + '</small></div><span class=\"condition-tag\">' + esc(l.condition) + '</span><div class=\"price-meta\">📍 ' + esc(l.location) + \" · Posted \" + formatDateRel(l.postedAt) + '</div><div style=\"margin-top:18px;display:flex;flex-direction:column;gap:10px\">' + actionsHTML + \"</div></div></aside></div></div>\";
   }
 
@@ -434,8 +435,9 @@ window.FALLBACK_IMG =
     var l = null; try { l = await Store.getById(id); } catch(e) {} if (!l) return;
     var user = null; try { user = await Store.getUser(); } catch(e) {}
     var cover = (l.images && l.images[0]) || window.FALLBACK_IMG;
-    var overlay = openModal(\"Contact seller\", \"<h2>Message \" + esc(l.seller.name) + '</h2><p class=\"modal-sub\">Ask about this item. This is a demo — nothing is actually sent.</p><div class=\"modal-summary\"><img src=\"' + esc(cover) + '\" onerror=\"this.onerror=null;this.src=FALLBACK_IMG\" alt=\"\"><div class=\\\"ms-title\\\">' + esc(l.title) + '</div><div class=\"ms-price\">' + formatPrice(l.price) + \" · \" + esc(l.location) + '</div></div><form id=\"contact-form\" novalidate><div class=\"field\"><label for=\"c-name\">Your name</label><input class=\"input\" id=\"c-name\" type=\"text\" value=\"' + esc(user ? user.name : \"\") + '\" placeholder=\"Your name\" /><div class=\"error-text\" data-err=\"c-name\" hidden></div></div><div class=\"field\"><label for=\"c-message\">Message</label><textarea class=\"textarea\" id=\"c-message\" placeholder=\"Hi! Is this still available?\">Hi! Is this still available?</textarea><div class=\"error-text\" data-err=\"c-message\" hidden></div></div><button class=\"btn btn-primary btn-block\" type=\"submit\">Send message</button></form>');
-    overlay.querySelector(\"#contact-form\").addEventListener(\"submit\", function (e) { e.preventDefault(); closeModal(); toast(\"Message sent to \" + l.seller.name.split(\" \")[0] + \"! ✉️\"); });
+    var sellerName = l.seller ? l.seller.name : \"Anonymous\";
+    var overlay = openModal(\"Contact seller\", \"<h2>Message \" + esc(sellerName) + '</h2><p class=\"modal-sub\">Ask about this item. This is a demo — nothing is actually sent.</p><div class=\"modal-summary\"><img src=\"' + esc(cover) + '\" onerror=\"this.onerror=null;this.src=FALLBACK_IMG\" alt=\"\"><div class=\\\"ms-title\\\">' + esc(l.title) + '</div><div class=\"ms-price\">' + formatPrice(l.price) + \" · \" + esc(l.location) + '</div></div><form id=\"contact-form\" novalidate><div class=\"field\"><label for=\"c-name\">Your name</label><input class=\"input\" id=\"c-name\" type=\"text\" value=\"' + esc(user ? user.name : \"\") + '\" placeholder=\"Your name\" /><div class=\"error-text\" data-err=\"c-name\" hidden></div></div><div class=\"field\"><label for=\"c-message\">Message</label><textarea class=\"textarea\" id=\"c-message\" placeholder=\"Hi! Is this still available?\">Hi! Is this still available?</textarea><div class=\"error-text\" data-err=\"c-message\" hidden></div></div><button class=\"btn btn-primary btn-block\" type=\"submit\">Send message</button></form>');
+    overlay.querySelector(\"#contact-form\").addEventListener(\"submit\", function (e) { e.preventDefault(); closeModal(); toast(\"Message sent to \" + sellerName.split(\" \")[0] + \"! ✉️\"); });
   }
 
   /* ----------------------------- Router ---------------------------- */
