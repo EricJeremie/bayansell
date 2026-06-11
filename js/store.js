@@ -32,7 +32,18 @@ var Store = (function () {
 
   // User-posted listings (most recent first).
   function getUserListings() {
-    return read(LISTINGS_KEY, []);
+    var listings = read(LISTINGS_KEY, []);
+    // Ensure all listings have mock engagement fields
+    var updated = false;
+    listings.forEach(function(l) {
+      if (l.views === undefined) {
+        l.views = Math.floor(Math.random() * 150) + 10;
+        l.inquiries = Math.floor(l.views * (Math.random() * 0.15));
+        updated = true;
+      }
+    });
+    if (updated) write(LISTINGS_KEY, listings);
+    return listings;
   }
 
   // All listings: user posts first, then seed data.
@@ -61,8 +72,10 @@ var Store = (function () {
       seller: { name: (getUser() && getUser().name) || "You" },
       isMine: true,
       postedAt: new Date().toISOString(),
+      views: Math.floor(Math.random() * 5), // starts fresh
+      inquiries: 0
     };
-    var listings = getUserListings();
+    var listings = read(LISTINGS_KEY, []);
     listings.unshift(listing);
     var ok = write(LISTINGS_KEY, listings);
     if (!ok) {
@@ -74,7 +87,7 @@ var Store = (function () {
   }
 
   function deleteListing(id) {
-    var listings = getUserListings().filter(function (l) {
+    var listings = read(LISTINGS_KEY, []).filter(function (l) {
       return l.id !== id;
     });
     write(LISTINGS_KEY, listings);
