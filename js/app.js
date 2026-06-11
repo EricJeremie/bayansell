@@ -1132,7 +1132,8 @@ window.FALLBACK_IMG =
     app.addEventListener("dragover", function (e) {
       if (e.target.closest(".dropzone")) {
         e.preventDefault();
-        e.target.closest(".dropzone").style.borderColor = "#222";
+        var dz = e.target.closest(".dropzone");
+        dz.style.borderColor = "var(--text)";
       }
     });
     app.addEventListener("dragleave", function (e) {
