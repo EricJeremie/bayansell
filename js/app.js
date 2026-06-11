@@ -860,6 +860,14 @@ window.FALLBACK_IMG =
     else location.hash = "#/";
   }
 
+  function toggleTheme() {
+    var html = document.documentElement;
+    var current = html.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('bayansell:theme:v1', next);
+  }
+
   function bindEvents() {
     // Delegated clicks within the app view.
     app.addEventListener("click", function (e) {
@@ -951,6 +959,12 @@ window.FALLBACK_IMG =
         else render();
         window.scrollTo(0, 0);
       });
+    }
+
+    // Theme toggle.
+    var themeBtn = document.getElementById("theme-toggle");
+    if (themeBtn) {
+      themeBtn.addEventListener("click", toggleTheme);
     }
 
     // Account dropdown.
