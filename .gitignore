@@ -13,3 +13,6 @@
 
 # Node (not used, but safe)
 node_modules/
+
+# Local Claude preview config (machine-specific paths)
+.claude/

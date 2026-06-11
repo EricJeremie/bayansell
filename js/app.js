@@ -528,6 +528,209 @@ window.FALLBACK_IMG =
     });
   }
 
+  /* -------------------------- Static pages ------------------------- */
+  // Content pages linked from the footer. Each entry is { title, build }
+  // where build() returns the inner HTML for the page body.
+
+  function pageHeroHTML(eyebrow, title, sub) {
+    return '<header class="page-hero">' +
+      (eyebrow ? '<span class="page-eyebrow">' + esc(eyebrow) + '</span>' : '') +
+      '<h1>' + esc(title) + '</h1>' +
+      (sub ? '<p>' + esc(sub) + '</p>' : '') +
+      '</header>';
+  }
+
+  function pageCtaHTML(title, sub, btnText, href) {
+    return '<section class="page-cta"><h2>' + esc(title) + '</h2><p>' + esc(sub) + '</p><a class="btn btn-primary" href="' + href + '">' + esc(btnText) + '</a></section>';
+  }
+
+  var ICON_SHIELD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>';
+  var ICON_CHAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H8l-4 4V5z"/></svg>';
+  var ICON_CASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/></svg>';
+  var ICON_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
+  var ICON_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>';
+  var ICON_FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
+  var ICON_MAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>';
+  var ICON_HEART2 = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.4-7 10-7 10z"/></svg>';
+  var ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg>';
+  var ICON_SPARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/></svg>';
+
+  function featureGridHTML(items) {
+    return '<div class="feature-grid">' + items.map(function (it) {
+      return '<div class="feature-card"><div class="feature-icon">' + it.icon + '</div><h3>' + esc(it.title) + '</h3><p>' + esc(it.body) + '</p></div>';
+    }).join("") + '</div>';
+  }
+
+  function stepsHTML(steps) {
+    return '<ol class="steps-grid">' + steps.map(function (s, i) {
+      return '<li class="step-card"><span class="step-num">' + (i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p>' + esc(s.body) + '</p></div></li>';
+    }).join("") + '</ol>';
+  }
+
+  function faqHTML(items) {
+    return '<div class="faq-list">' + items.map(function (q) {
+      return '<details class="faq-item"><summary>' + esc(q.q) + '<span class="faq-chevron" aria-hidden="true"></span></summary><div class="faq-answer">' + esc(q.a) + '</div></details>';
+    }).join("") + '</div>';
+  }
+
+  var STATIC_PAGES = {
+    "how-it-works": {
+      title: "How it works",
+      build: function () {
+        return pageHeroHTML("Getting started", "How Bayansell works", "Buy and sell preloved and brand-new items with people across the Philippines — in just a few taps.") +
+          '<section class="page-section"><h2>For buyers</h2>' +
+          stepsHTML([
+            { title: "Browse and search", body: "Explore thousands of listings by category, location, or keyword. Tap the heart to save items you like for later." },
+            { title: "Message the seller", body: "Found something? Send the seller a message to ask questions, check availability, or agree on a meet-up." },
+            { title: "Meet up and pay", body: "Inspect the item in person at a safe public place. Pay only once you're happy — cash or your preferred method." },
+          ]) + '</section>' +
+          '<section class="page-section"><h2>For sellers</h2>' +
+          stepsHTML([
+            { title: "Create your account", body: "Sign up in seconds and switch to a seller account from your profile menu — it's free to list." },
+            { title: "Post your item", body: "Add clear photos, an honest description, a fair price, and your location. Good listings sell faster." },
+            { title: "Reply and close the deal", body: "Respond to buyer inquiries from your dashboard, arrange a safe meet-up, and mark it sold." },
+          ]) + '</section>' +
+          '<section class="page-section"><h2>Why Bayansell</h2>' +
+          featureGridHTML([
+            { icon: ICON_CASH, title: "No listing fees", body: "Post as many items as you like for free. Keep 100% of what you earn." },
+            { icon: ICON_PIN, title: "Local first", body: "Find deals near you across Manila, Cebu, Davao, and the rest of the Philippines." },
+            { icon: ICON_HEART2, title: "Built for community", body: "Give preloved items a second life and shop more sustainably." },
+          ]) + '</section>' +
+          pageCtaHTML("Ready to find your next deal?", "Start browsing or list your first item today.", "Browse items", "#/");
+      },
+    },
+
+    "safety": {
+      title: "Safety tips",
+      build: function () {
+        return pageHeroHTML("Trust & safety", "Stay safe on Bayansell", "A few simple habits keep buying and selling smooth and worry-free. Please read these before your first meet-up.") +
+          '<section class="page-section">' +
+          featureGridHTML([
+            { icon: ICON_PIN, title: "Meet in public", body: "Always meet in a busy public place — a mall, coffee shop, or official MRT/LRT meet-up point. Bring a friend if you can." },
+            { icon: ICON_EYE, title: "Inspect before you pay", body: "Check the item carefully and test that it works. Only hand over payment once you're fully satisfied." },
+            { icon: ICON_CASH, title: "Be careful with payments", body: "Prefer cash on meet-up. Avoid sending deposits or GCash to people you haven't met. Never share OTPs or card details." },
+            { icon: ICON_CHAT, title: "Keep chats on Bayansell", body: "Message through the app so there's a record. Be wary of anyone rushing you to move off-platform." },
+            { icon: ICON_FLAG, title: "Spot the red flags", body: "Prices that seem too good to be true, requests for upfront fees, or sob stories are classic scam signs. Trust your gut." },
+            { icon: ICON_SHIELD, title: "Report problems", body: "If something feels off, stop the deal and report the user. Helping us flag bad actors keeps the community safe." },
+          ]) + '</section>' +
+          '<section class="page-section page-callout"><h2>If a deal feels wrong, walk away</h2><p>No item is worth your safety. It is always okay to cancel, leave, or say no — a real seller or buyer will understand.</p></section>' +
+          pageCtaHTML("Questions about safety?", "Our team is here to help you buy and sell with confidence.", "Visit the Help center", "#/help");
+      },
+    },
+
+    "help": {
+      title: "Help center",
+      build: function () {
+        return pageHeroHTML("Support", "Help center", "Answers to the questions we hear most. Can't find what you need? Contact us any time.") +
+          '<section class="page-section"><h2>Buying</h2>' +
+          faqHTML([
+            { q: "How do I contact a seller?", a: "Open any listing and tap “Message seller.” You'll need to be logged in. Your conversation appears in the seller's dashboard and they can reply right there." },
+            { q: "How do I save items for later?", a: "Tap the heart icon on any listing to add it to your Saved items. You can find everything you've saved from the Saved link in the header." },
+            { q: "Is there buyer protection?", a: "Bayansell is a community marketplace for in-person deals, so we don't process payments. Follow our safety tips: meet in public, inspect the item, and pay only when you're happy." },
+          ]) + '</section>' +
+          '<section class="page-section"><h2>Selling</h2>' +
+          faqHTML([
+            { q: "How do I start selling?", a: "Log in, open the profile menu, and choose “Become a Seller” (or switch to a seller account). Then tap “Sell your item” to post your first listing." },
+            { q: "How much does it cost to list?", a: "Listing on Bayansell is completely free. There are no listing fees and no commissions — you keep everything you earn." },
+            { q: "How many photos can I add?", a: "You can add up to 5 photos per listing. Clear, well-lit photos from multiple angles help your item sell much faster." },
+            { q: "How do I edit or delete a listing?", a: "Go to your seller dashboard, find the item under “Manage Listings,” and use the edit or delete buttons. You can also edit from the listing page itself." },
+          ]) + '</section>' +
+          '<section class="page-section"><h2>Account</h2>' +
+          faqHTML([
+            { q: "Do I need an account to browse?", a: "No — anyone can browse and search listings. You only need an account to save items, message sellers, or post your own listings." },
+            { q: "I didn't get my confirmation email.", a: "Check your spam folder first. The link can take a few minutes to arrive. If it still doesn't show up, try signing up again or contact support." },
+            { q: "How do I switch between buying and selling?", a: "Open the profile menu in the top-right and use “Switch to Seller” or “Switch to Buyer” any time. Sellers get access to the dashboard." },
+          ]) + '</section>' +
+          pageCtaHTML("Still need a hand?", "Reach out and we'll get back to you as soon as we can.", "Contact us", "#/contact");
+      },
+    },
+
+    "about": {
+      title: "Our story",
+      build: function () {
+        return pageHeroHTML("About us", "Our story", "Bayansell started with a simple idea: make it easy for Filipinos to buy and sell with the people around them.") +
+          '<section class="page-section page-prose"><p>The name <strong>Bayansell</strong> blends <em>bayan</em> — community, town, nation — with the simple act of selling. That\'s the heart of what we do: helping neighbors give preloved items a second life and discover great finds close to home.</p>' +
+          '<p>Too often, good stuff ends up forgotten in closets or thrown away while someone nearby is looking for exactly that. We built Bayansell to close that gap — a friendly, local-first marketplace where a fair deal is only a few taps away, from Baguio to Davao.</p></section>' +
+          '<section class="page-section"><div class="story-stats"><div class="story-stat"><span class="story-num">10</span><span class="story-label">cities and growing</span></div><div class="story-stat"><span class="story-num">₱0</span><span class="story-label">listing fees, always</span></div><div class="story-stat"><span class="story-num">100%</span><span class="story-label">made in the Philippines</span></div></div></section>' +
+          '<section class="page-section"><h2>What we believe</h2>' +
+          featureGridHTML([
+            { icon: ICON_HEART2, title: "Community first", body: "Real people, real neighborhoods. We design for trust between buyers and sellers." },
+            { icon: ICON_GLOBE, title: "Better for the planet", body: "Every preloved item that finds a new home is one less thing in a landfill." },
+            { icon: ICON_SPARK, title: "Simple and fair", body: "No clutter, no hidden fees. Just a clean, fast way to buy and sell." },
+          ]) + '</section>' +
+          pageCtaHTML("Join the community", "Whether you're clearing out or hunting for a deal, there's a place for you here.", "Get started", "#/");
+      },
+    },
+
+    "careers": {
+      title: "Careers",
+      build: function () {
+        var jobs = [
+          { role: "Senior Frontend Engineer", team: "Engineering", type: "Full-time", place: "Remote (PH)" },
+          { role: "Product Designer", team: "Design", type: "Full-time", place: "Makati / Hybrid" },
+          { role: "Community & Trust Lead", team: "Operations", type: "Full-time", place: "Remote (PH)" },
+          { role: "Customer Support Specialist", team: "Support", type: "Full-time", place: "Cebu / Hybrid" },
+        ];
+        return pageHeroHTML("Careers", "Build Bayansell with us", "We're a small, ambitious team on a mission to help every Filipino buy and sell with their community. Come help us grow.") +
+          '<section class="page-section"><h2>Why work here</h2>' +
+          featureGridHTML([
+            { icon: ICON_GLOBE, title: "Remote-friendly", body: "Work from anywhere in the Philippines, with hybrid options in Metro Manila and Cebu." },
+            { icon: ICON_SPARK, title: "Real impact", body: "Small team, big ownership. Your work ships to real people every week." },
+            { icon: ICON_HEART2, title: "People-first culture", body: "Generous leave, learning budget, and a team that genuinely has your back." },
+          ]) + '</section>' +
+          '<section class="page-section"><h2>Open roles</h2><div class="jobs-list">' +
+          jobs.map(function (j) {
+            return '<div class="job-card"><div class="job-info"><h3>' + esc(j.role) + '</h3><div class="job-meta"><span>' + esc(j.team) + '</span><span>•</span><span>' + esc(j.type) + '</span><span>•</span><span>' + esc(j.place) + '</span></div></div><button class="btn btn-secondary" type="button" data-action="apply-job" data-role="' + esc(j.role) + '">Apply</button></div>';
+          }).join("") + '</div></section>' +
+          '<section class="page-section page-callout"><h2>Don\'t see your role?</h2><p>We\'re always glad to meet good people. Tell us how you\'d help and we\'ll keep you in mind.</p></section>' +
+          pageCtaHTML("Want to chat?", "Send us a note and our team will be in touch.", "Get in touch", "#/contact");
+      },
+    },
+
+    "contact": {
+      title: "Contact",
+      build: function () {
+        return pageHeroHTML("Contact us", "Get in touch", "Questions, feedback, or a partnership idea? We'd love to hear from you.") +
+          '<section class="page-section"><div class="contact-grid">' +
+          '<aside class="contact-methods">' +
+          '<div class="contact-method"><div class="feature-icon">' + ICON_MAIL + '</div><div><h3>Email</h3><p>support@bayansell.ph</p></div></div>' +
+          '<div class="contact-method"><div class="feature-icon">' + ICON_CHAT + '</div><div><h3>Help center</h3><p><a href="#/help" class="inline-link">Browse common questions</a></p></div></div>' +
+          '<div class="contact-method"><div class="feature-icon">' + ICON_PIN + '</div><div><h3>Office</h3><p>Makati City, Metro Manila</p></div></div>' +
+          '<div class="contact-method"><div class="feature-icon">' + ICON_SHIELD + '</div><div><h3>Safety concern?</h3><p><a href="#/safety" class="inline-link">Read our safety tips</a></p></div></div>' +
+          '</aside>' +
+          '<form id="contact-page-form" class="contact-form" novalidate>' +
+          '<div class="field"><label for="ct-name">Your name</label><input class="input" id="ct-name" type="text" placeholder="Juan dela Cruz" /><div class="error-text" data-err="ct-name" hidden></div></div>' +
+          '<div class="field"><label for="ct-email">Email</label><input class="input" id="ct-email" type="email" placeholder="you@email.com" /><div class="error-text" data-err="ct-email" hidden></div></div>' +
+          '<div class="field"><label for="ct-subject">Subject</label><input class="input" id="ct-subject" type="text" placeholder="How can we help?" /><div class="error-text" data-err="ct-subject" hidden></div></div>' +
+          '<div class="field"><label for="ct-message">Message</label><textarea class="textarea" id="ct-message" placeholder="Tell us a bit more..."></textarea><div class="error-text" data-err="ct-message" hidden></div></div>' +
+          '<button class="btn btn-primary btn-block" type="submit">Send message</button></form>' +
+          '</div></section>';
+      },
+    },
+  };
+
+  function renderStaticPage(slug) {
+    var page = STATIC_PAGES[slug];
+    if (!page) { renderBrowse(); return; }
+    app.innerHTML = '<div class="content-page">' + page.build() + '</div>';
+  }
+
+  function submitContactPage(form) {
+    var name = document.getElementById("ct-name").value.trim();
+    var email = document.getElementById("ct-email").value.trim();
+    var subject = document.getElementById("ct-subject").value.trim();
+    var message = document.getElementById("ct-message").value.trim();
+    var ok = true;
+    setFieldError("ct-name", name ? "" : "Please enter your name."); if (!name) ok = false;
+    var emailOk = /.+@.+\..+/.test(email);
+    setFieldError("ct-email", emailOk ? "" : "Please enter a valid email."); if (!emailOk) ok = false;
+    setFieldError("ct-subject", subject ? "" : "Please add a subject."); if (!subject) ok = false;
+    setFieldError("ct-message", message ? "" : "Please write a message."); if (!message) ok = false;
+    if (!ok) { var firstErr = form.querySelector(".input-error"); if (firstErr) firstErr.focus(); return; }
+    form.reset();
+    toast("Thanks, " + name.split(" ")[0] + "! Your message has been sent. ✉️");
+  }
+
   /* ----------------------------- Router ---------------------------- */
 
   function parseHash() {
@@ -538,6 +741,8 @@ window.FALLBACK_IMG =
     if (h === "/favorites") return { name: "favorites" };
     if (h === "/dashboard") return { name: "dashboard" };
     if (h === "/my-listings") return { name: "dashboard" };
+    var slug = h.replace(/^\//, "");
+    if (STATIC_PAGES[slug]) return { name: "page", slug: slug };
     return { name: "browse" };
   }
 
@@ -558,6 +763,7 @@ window.FALLBACK_IMG =
     else if (route.name === "post") await renderPost(route.editId);
     else if (route.name === "favorites") await renderFavorites();
     else if (route.name === "dashboard") await renderDashboard();
+    else if (route.name === "page") renderStaticPage(route.slug);
     else await renderBrowse();
     await updateSavedBadge();
     await updateAuthUI();
@@ -623,6 +829,8 @@ window.FALLBACK_IMG =
       if (sideItem) { e.preventDefault(); state.activeInquiryId = sideItem.getAttribute("data-inquiry-id"); await render(); return; }
       var tab = e.target.closest(".cat-tab");
       if (tab) { e.preventDefault(); state.category = tab.getAttribute("data-cat"); await render(); return; }
+      var applyJob = e.target.closest('[data-action="apply-job"]');
+      if (applyJob) { e.preventDefault(); toast("Thanks for your interest! Email your CV to careers@bayansell.ph 📨"); return; }
     });
 
     app.addEventListener("change", function (e) {
@@ -633,6 +841,7 @@ window.FALLBACK_IMG =
     app.addEventListener("submit", async function (e) {
       if (e.target.id === "post-form") { e.preventDefault(); await submitPost(e.target); }
       else if (e.target.id === "chat-form") { e.preventDefault(); var inqId = state.activeInquiryId; var input = document.getElementById('chat-input'); var text = input ? input.value.trim() : ""; if (!text || !inqId) return; try { await Store.sendMessage(inqId, text); } catch(e) {} await render(); }
+      else if (e.target.id === "contact-page-form") { e.preventDefault(); submitContactPage(e.target); }
     });
 
     app.addEventListener("dragover", function (e) { if (e.target.closest(".dropzone")) { e.preventDefault(); var dz = e.target.closest(".dropzone"); dz.style.borderColor = "var(--text)"; } });

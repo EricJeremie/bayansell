@@ -7,7 +7,7 @@
   <title>Bayansell — Buy & sell with your community</title>
   <meta name="description" content="Bayansell is a marketplace where you can post your items and browse great finds from people across the Philippines." />
   <link rel="preconnect" href="https://images.unsplash.com" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=2" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%232563EB' d='M16 2c4 6 8 9 8 14a8 8 0 1 1-16 0c0-5 4-8 8-14z'/%3E%3C/svg%3E" />
   <script>
     (function() {
@@ -82,15 +82,15 @@
       </div>
       <div class="footer-col">
         <h4>Community</h4>
-        <a href="#/">How it works</a>
-        <a href="#/">Safety tips</a>
-        <a href="#/">Help center</a>
+        <a href="#/how-it-works">How it works</a>
+        <a href="#/safety">Safety tips</a>
+        <a href="#/help">Help center</a>
       </div>
       <div class="footer-col">
         <h4>About</h4>
-        <a href="#/">Our story</a>
-        <a href="#/">Careers</a>
-        <a href="#/">Contact</a>
+        <a href="#/about">Our story</a>
+        <a href="#/careers">Careers</a>
+        <a href="#/contact">Contact</a>
       </div>
     </div>
     <div class="footer-bar">
@@ -99,11 +99,13 @@
     </div>
   </footer>
 
-  <!-- ===== Scripts (classic, ordered) ===== -->
+  <!-- ===== Scripts (classic, ordered) =====
+       Bump ?v= when you change a JS/CSS file so browsers fetch the new
+       version instead of a stale cached copy after a deploy. -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/supabase.js?v=2"></script>
+  <script src="js/data.js?v=2"></script>
+  <script src="js/store.js?v=2"></script>
+  <script src="js/app.js?v=3"></script>
 </body>
 </html>
