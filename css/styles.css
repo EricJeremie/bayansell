@@ -901,13 +901,14 @@ img { display: block; max-width: 100%; }
 /* ---- Phones ---- */
 @media (max-width: 600px) {
 
-  /* (1) Single-column grid on phones — one card per row, full-width photos */
+  /* (1) Two-column grid on phones — smaller cards for better density */
   .grid {
-    grid-template-columns: 1fr;
-    gap: 22px;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 12px;
   }
-  .card-title { font-size: 15px; }
-  .card-price { font-size: 15px; }
+  .card-title { font-size: 14px; }
+  .card-price { font-size: 14px; }
+  .card-location { font-size: 13px; }
   .toolbar {
     flex-direction: column;
     align-items: flex-start;
@@ -917,11 +918,11 @@ img { display: block; max-width: 100%; }
 
   /* (4) Limit gallery height on mobile so content isn't too deep */
   .gallery {
-     max-height: 300px;
-     margin-bottom: 20px;
+     max-height: 240px;
+     margin-bottom: 16px;
   }
   .gallery img {
-     max-height: 300px;
+     max-height: 240px;
   }
 
   /* (4) 16px on every text field so iOS Safari never auto-zooms on focus */
