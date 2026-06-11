@@ -24,6 +24,8 @@ window.FALLBACK_IMG =
     search: "",
     category: "All",
     sort: "newest",
+    dashTab: "listings",
+    activeInquiryId: null
   };
 
   var pendingImages = []; // data URLs queued in the post form
@@ -301,10 +303,11 @@ window.FALLBACK_IMG =
     var sellerMeta = l.isMine ? "This is your listing" : "Member · Bayansell";
 
     var primaryAction = l.isMine
-      ? '<button class="btn btn-primary btn-block" type="button" data-delete="' + esc(l.id) + '">Delete listing</button>'
+      ? '<button class="btn btn-primary btn-block" type="button" data-action="edit" data-id="' + esc(l.id) + '">Edit listing</button>'
       : '<button class="btn btn-primary btn-block" type="button" data-action="contact" data-id="' + esc(l.id) + '">Message seller</button>';
     var actionsHTML =
       primaryAction +
+      (l.isMine ? '<button class="btn btn-secondary btn-block" type="button" data-delete="' + esc(l.id) + '">Delete listing</button>' : '') +
       '<button class="btn btn-secondary btn-block" type="button" data-fav="' + esc(l.id) + '">' +
       (isFav ? "♥ Saved" : "♡ Save item") + "</button>" +
       '<button class="btn btn-secondary btn-block" type="button" data-action="share" data-id="' + esc(l.id) + '">Share</button>';
@@ -344,20 +347,20 @@ window.FALLBACK_IMG =
       "</div></div>";
   }
 
-  /* ------------------------------ Post ----------------------------- */
+  /* ------------------------------ Post & Edit ----------------------------- */
 
-  function selectOptions(arr, placeholder) {
+  function selectOptions(arr, placeholder, selected) {
     return (
-      '<option value="" disabled selected>' + esc(placeholder) + "</option>" +
+      '<option value="" disabled' + (!selected ? " selected" : "") + '>' + esc(placeholder) + "</option>" +
       arr
         .map(function (v) {
-          return '<option value="' + esc(v) + '">' + esc(v) + "</option>";
+          return '<option value="' + esc(v) + '"' + (v === selected ? " selected" : "") + '>' + esc(v) + "</option>";
         })
         .join("")
     );
   }
 
-  function renderPost() {
+  function renderPost(editId) {
     var user = Store.getUser();
     if (!user) {
       app.innerHTML =
@@ -374,52 +377,59 @@ window.FALLBACK_IMG =
       return;
     }
 
-    pendingImages = [];
+    var l = editId ? Store.getById(editId) : null;
+    if (editId && (!l || !l.isMine)) { location.hash = "#/"; return; }
+
+    pendingImages = l ? l.images.slice() : [];
+    var title = l ? "Edit your listing" : "Sell your item";
+    var btnText = l ? "Save changes" : "Post item";
+
     app.innerHTML =
-      '<div class="form-page"><h1>Sell your item</h1>' +
+      '<div class="form-page"><h1>' + title + '</h1>' +
       '<p class="lead">List your item in a couple of minutes. Add clear photos and an honest description to sell faster.</p>' +
-      '<form id="post-form" novalidate>' +
+      '<form id="post-form" novalidate data-edit-id="' + (editId || "") + '">' +
 
       '<div class="field"><label for="pf-title">Title</label>' +
-      '<input class="input" id="pf-title" type="text" maxlength="80" placeholder="e.g. iPhone 14 Pro 256GB - Deep Purple" />' +
+      '<input class="input" id="pf-title" type="text" maxlength="80" value="' + esc(l ? l.title : "") + '" placeholder="e.g. iPhone 14 Pro 256GB - Deep Purple" />' +
       '<div class="error-text" data-err="title" hidden></div></div>' +
 
       '<div class="field-row">' +
       '<div class="field"><label for="pf-category">Category</label>' +
-      '<select class="select" id="pf-category">' + selectOptions(CATEGORIES, "Select a category") + "</select>" +
+      '<select class="select" id="pf-category">' + selectOptions(CATEGORIES, "Select a category", l ? l.category : null) + "</select>" +
       '<div class="error-text" data-err="category" hidden></div></div>' +
       '<div class="field"><label for="pf-condition">Condition</label>' +
-      '<select class="select" id="pf-condition">' + selectOptions(CONDITIONS, "Select condition") + "</select>" +
+      '<select class="select" id="pf-condition">' + selectOptions(CONDITIONS, "Select condition", l ? l.condition : null) + "</select>" +
       '<div class="error-text" data-err="condition" hidden></div></div>' +
       "</div>" +
 
       '<div class="field-row">' +
       '<div class="field"><label for="pf-price">Price</label>' +
       '<div class="price-input"><span class="peso">₱</span>' +
-      '<input class="input" id="pf-price" type="number" min="1" step="1" placeholder="0" /></div>' +
+      '<input class="input" id="pf-price" type="number" min="1" step="1" value="' + (l ? l.price : "") + '" placeholder="0" /></div>' +
       '<div class="error-text" data-err="price" hidden></div></div>' +
       '<div class="field"><label for="pf-location">Location</label>' +
-      '<select class="select" id="pf-location">' + selectOptions(PH_CITIES, "Select a city") + "</select>" +
+      '<select class="select" id="pf-location">' + selectOptions(PH_CITIES, "Select a city", l ? l.location : null) + "</select>" +
       '<div class="error-text" data-err="location" hidden></div></div>' +
       "</div>" +
 
       '<div class="field"><label for="pf-description">Description</label>' +
-      '<textarea class="textarea" id="pf-description" maxlength="1200" placeholder="Describe your item: condition, what\'s included, reason for selling, meet-up options..."></textarea>' +
+      '<textarea class="textarea" id="pf-description" maxlength="1200" placeholder="Describe your item...">' + esc(l ? l.description : "") + '</textarea>' +
       '<div class="error-text" data-err="description" hidden></div></div>' +
 
       '<div class="field"><label>Photos <span class="hint">(up to 5 — optional but recommended)</span></label>' +
       '<label class="dropzone" for="image-input">' +
       '<svg viewBox="0 0 24 24"><path d="M19 13v6H5v-6H3v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2zM12 2 7 7h3v7h4V7h3l-5-5z"/></svg>' +
       "<div><strong>Click to upload</strong> or drag and drop</div>" +
-      '<div style="font-size:13px;margin-top:4px">PNG or JPG — stored locally in your browser</div>' +
       '<input id="image-input" type="file" accept="image/*" multiple hidden /></label>' +
       '<div class="image-preview" id="image-preview"></div></div>' +
 
       '<div class="form-actions">' +
-      '<a class="btn btn-secondary" href="#/">Cancel</a>' +
-      '<button class="btn btn-primary" type="submit">Post item</button>' +
+      '<button class="btn btn-secondary" type="button" data-action="back">Cancel</button>' +
+      '<button class="btn btn-primary" type="submit">' + btnText + '</button>' +
       "</div>" +
       "</form></div>";
+      
+    renderPreviews();
   }
 
   function renderPreviews() {
@@ -506,6 +516,7 @@ window.FALLBACK_IMG =
   }
 
   function submitPost(form) {
+    var editId = form.getAttribute("data-edit-id");
     var data = {
       title: document.getElementById("pf-title").value.trim(),
       category: document.getElementById("pf-category").value,
@@ -540,9 +551,15 @@ window.FALLBACK_IMG =
 
     data.images = pendingImages.slice();
     try {
-      var listing = Store.addListing(data);
-      toast("Your item is now live! 🎉");
-      location.hash = "#/item/" + listing.id;
+      if (editId) {
+        Store.updateListing(editId, data);
+        toast("Changes saved! ✨");
+        location.hash = "#/dashboard";
+      } else {
+        var listing = Store.addListing(data);
+        toast("Your item is now live! 🎉");
+        location.hash = "#/item/" + listing.id;
+      }
     } catch (e) {
       toast(e.message || "Could not save your item.");
     }
@@ -722,72 +739,113 @@ window.FALLBACK_IMG =
 
   function renderDashboard() {
     var user = Store.getUser();
-    if (!user || user.role !== "seller") {
-      location.hash = "#/";
-      return;
-    }
+    if (!user || user.role !== "seller") { location.hash = "#/"; return; }
 
     var listings = Store.getUserListings();
     var revenue = listings.reduce(function(sum, l) { return sum + l.price; }, 0);
     var views = listings.reduce(function(sum, l) { return sum + (l.views || 0); }, 0);
-    var inquiries = listings.reduce(function(sum, l) { return sum + (l.inquiries || 0); }, 0);
+    var inquiries = Store.getInquiries();
+    var totalInqCount = listings.reduce(function(sum, l) { return sum + (l.inquiries || 0); }, 0);
 
-    var cats = {};
-    listings.forEach(function(l) { cats[l.category] = (cats[l.category] || 0) + 1; });
-    var sortedCats = Object.keys(cats).sort(function(a, b) { return cats[b] - cats[a]; });
+    var tab = state.dashTab;
 
-    var tableRows = listings.map(function(l) {
-      return (
-        '<tr>' +
-        '<td><div class="dash-item-cell">' + imgTag(l.images[0], "", "dash-thumb") + '<span>' + esc(l.title) + '</span></div></td>' +
-        '<td>' + formatPrice(l.price) + '</td>' +
-        '<td>' + formatDateAbs(l.postedAt) + '</td>' +
-        '<td>' + (l.views || 0) + '</td>' +
-        '<td><span class="status-badge">Active</span></td>' +
-        '<td><div class="dash-actions">' +
-        '<button class="icon-btn" title="Edit" data-action="edit-mock">✎</button>' +
-        '<button class="icon-btn danger" title="Delete" data-delete="' + esc(l.id) + '">✕</button>' +
-        '</div></td>' +
-        '</tr>'
-      );
-    }).join("");
+    var contentHTML = "";
+    if (tab === "listings") {
+      var tableRows = listings.map(function(l) {
+        return (
+          '<tr>' +
+          '<td><div class="dash-item-cell">' + imgTag(l.images[0], "", "dash-thumb") + '<span>' + esc(l.title) + '</span></div></td>' +
+          '<td>' + formatPrice(l.price) + '</td>' +
+          '<td>' + formatDateAbs(l.postedAt) + '</td>' +
+          '<td>' + (l.views || 0) + '</td>' +
+          '<td><span class="status-badge">Active</span></td>' +
+          '<td><div class="dash-actions">' +
+          '<button class="icon-btn" title="Edit" data-action="edit" data-id="' + esc(l.id) + '">✎</button>' +
+          '<button class="icon-btn danger" title="Delete" data-delete="' + esc(l.id) + '">✕</button>' +
+          '</div></td>' +
+          '</tr>'
+        );
+      }).join("");
 
-    var catRows = sortedCats.map(function(c) {
-      var count = cats[c];
-      var pct = Math.round((count / listings.length) * 100);
-      return (
-        '<div class="cat-perf-row">' +
-        '<div class="cat-perf-info"><span>' + esc(c) + '</span><span>' + count + ' items (' + pct + '%)</span></div>' +
-        '<div class="cat-perf-bar"><div style="width:' + pct + '%"></div></div>' +
-        '</div>'
-      );
-    }).join("");
+      contentHTML = 
+        '<div class="table-wrap"><table><thead><tr><th>Item</th><th>Price</th><th>Posted</th><th>Views</th><th>Status</th><th>Actions</th></tr></thead>' +
+        '<tbody>' + (tableRows || '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">No listings yet. <a href="#/post" style="color:var(--rausch);text-decoration:underline">Post your first item</a></td></tr>') + '</tbody></table></div>';
+    } else if (tab === "messages") {
+      var activeInq = inquiries.find(function(i) { return i.id === state.activeInquiryId; }) || inquiries[0];
+      if (activeInq && !state.activeInquiryId) state.activeInquiryId = activeInq.id;
+
+      var sidebarItems = inquiries.map(function(i) {
+        var lastMsg = i.messages[i.messages.length - 1];
+        return (
+          '<div class="msg-sidebar-item' + (state.activeInquiryId === i.id ? ' active' : '') + '" data-inquiry-id="' + i.id + '">' +
+          '<div class="msg-sidebar-name">' + esc(i.buyerName) + '</div>' +
+          '<div class="msg-sidebar-listing">' + esc(i.listingTitle) + '</div>' +
+          '<div class="msg-sidebar-preview">' + esc(lastMsg.text) + '</div>' +
+          '</div>'
+        );
+      }).join("");
+
+      var chatMessages = "";
+      if (activeInq) {
+        chatMessages = activeInq.messages.map(function(m) {
+          return (
+            '<div class="chat-msg ' + m.sender + '">' +
+            '<div class="chat-msg-bubble">' + esc(m.text) + '</div>' +
+            '<div class="chat-msg-time">' + formatDateRel(m.time) + '</div>' +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      contentHTML = 
+        '<div class="messaging-pane">' +
+        (inquiries.length ? 
+          '<div class="msg-sidebar">' + sidebarItems + '</div>' +
+          '<div class="msg-chat-wrap">' +
+            (activeInq ? 
+              '<div class="msg-chat-header">' +
+                '<div><div class="msg-chat-buyer">' + esc(activeInq.buyerName) + '</div><div class="msg-chat-meta">Interested in ' + esc(activeInq.listingTitle) + '</div></div>' +
+                '<a class="btn btn-secondary" href="#/item/' + activeInq.listingId + '" style="padding:8px 12px;font-size:13px">View Item</a>' +
+              '</div>' +
+              '<div class="msg-chat-body" id="chat-body">' + chatMessages + '</div>' +
+              '<form class="msg-chat-input" id="chat-form">' +
+                '<input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">' +
+                '<button type="submit" class="btn btn-primary">Send</button>' +
+              '</form>' : 
+              '<div class="msg-chat-empty">Select a conversation</div>'
+            ) +
+          '</div>' : 
+          '<div class="msg-empty-state"><h3>No messages yet</h3><p>Your buyer inquiries will show up here.</p></div>'
+        ) +
+        '</div>';
+    }
 
     app.innerHTML =
       '<div class="dashboard-page">' +
-      '<header class="dash-header"><h1>Seller Dashboard</h1><p>Performance overview for ' + esc(user.name) + '</p></header>' +
+      '<header class="dash-header"><div><h1>Seller Dashboard</h1><p>Performance overview for ' + esc(user.name) + '</p></div>' +
+      '<a class="btn btn-primary" href="#/post">Add Product</a></header>' +
 
       '<div class="stats-grid">' +
       '<div class="stat-card"><div class="stat-label">Active Listings</div><div class="stat-value">' + listings.length + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Potential Revenue</div><div class="stat-value">' + formatPrice(revenue) + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Total Views</div><div class="stat-value">' + views.toLocaleString() + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Total Inquiries</div><div class="stat-value">' + inquiries.toLocaleString() + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Total Inquiries</div><div class="stat-value">' + totalInqCount.toLocaleString() + '</div></div>' +
       '</div>' +
 
-      '<div class="dash-grid">' +
-      '<section class="dash-section listings-section"><h2>Manage Listings</h2>' +
-      (listings.length ?
-        '<div class="table-wrap"><table><thead><tr><th>Item</th><th>Price</th><th>Posted</th><th>Views</th><th>Status</th><th>Actions</th></tr></thead>' +
-        '<tbody>' + tableRows + '</tbody></table></div>' :
-        '<div class="empty-dash"><p>No active listings. Start selling to see data here!</p><a class="btn btn-primary" href="#/post">Post an item</a></div>'
-      ) +
-      '</section>' +
-
-      '<section class="dash-section category-section"><h2>Category Distribution</h2>' +
-      '<div class="cat-perf-list">' + (catRows || '<p class="muted">No category data yet.</p>') + '</div>' +
-      '</section>' +
+      '<div class="dash-tabs">' +
+      '<button class="dash-tab-btn' + (tab === 'listings' ? ' active' : '') + '" data-tab="listings">Manage Listings</button>' +
+      '<button class="dash-tab-btn' + (tab === 'messages' ? ' active' : '') + '" data-tab="messages">Messages' + (inquiries.length ? '<span class="menu-badge">' + inquiries.length + '</span>' : '') + '</button>' +
       '</div>' +
+
+      '<section class="dash-content">' + contentHTML + '</section>' +
       '</div>';
+      
+    if (tab === 'messages') {
+      var body = document.getElementById('chat-body');
+      if (body) body.scrollTop = body.scrollHeight;
+      var input = document.getElementById('chat-input');
+      if (input) input.focus();
+    }
   }
 
   /* ------------------------- My Listings --------------------------- */
@@ -824,7 +882,8 @@ window.FALLBACK_IMG =
           '<div class="manage-item">' +
           cardHTML(l) +
           '<div class="manage-actions">' +
-          '<button class="btn-danger" type="button" data-delete="' + esc(l.id) + '">Delete listing</button>' +
+          '<button class="btn-danger" type="button" data-action="edit" data-id="' + esc(l.id) + '">Edit</button>' +
+          '<button class="btn-danger" type="button" data-delete="' + esc(l.id) + '">Delete</button>' +
           "</div></div>"
         );
       })
@@ -897,6 +956,7 @@ window.FALLBACK_IMG =
     var h = location.hash.replace(/^#/, "");
     if (h.indexOf("/item/") === 0) return { name: "item", id: h.slice(6) };
     if (h === "/post") return { name: "post" };
+    if (h.indexOf("/edit/") === 0) return { name: "post", editId: h.slice(6) };
     if (h === "/favorites") return { name: "favorites" };
     if (h === "/my-listings") return { name: "my-listings" };
     if (h === "/dashboard") return { name: "dashboard" };
@@ -920,7 +980,7 @@ window.FALLBACK_IMG =
     opts = opts || {};
     var route = parseHash();
     if (route.name === "item") renderDetail(route.id);
-    else if (route.name === "post") renderPost();
+    else if (route.name === "post") renderPost(route.editId);
     else if (route.name === "favorites") renderFavorites();
     else if (route.name === "my-listings") renderMyListings();
     else if (route.name === "dashboard") renderDashboard();
@@ -1014,10 +1074,26 @@ window.FALLBACK_IMG =
         return;
       }
 
-      var editMock = e.target.closest('[data-action="edit-mock"]');
-      if (editMock) {
+      var edit = e.target.closest('[data-action="edit"]');
+      if (edit) {
         e.preventDefault();
-        toast("Edit feature is coming soon! 🛠️");
+        location.hash = "#/edit/" + edit.getAttribute("data-id");
+        return;
+      }
+      
+      var dashTab = e.target.closest("[data-tab]");
+      if (dashTab) {
+        e.preventDefault();
+        state.dashTab = dashTab.getAttribute("data-tab");
+        render();
+        return;
+      }
+      
+      var sideItem = e.target.closest("[data-inquiry-id]");
+      if (sideItem) {
+        e.preventDefault();
+        state.activeInquiryId = sideItem.getAttribute("data-inquiry-id");
+        render();
         return;
       }
 
@@ -1036,11 +1112,19 @@ window.FALLBACK_IMG =
       }
     });
 
-    // Post form submit.
+    // Form submits.
     app.addEventListener("submit", function (e) {
       if (e.target.id === "post-form") {
         e.preventDefault();
         submitPost(e.target);
+      } else if (e.target.id === "chat-form") {
+        e.preventDefault();
+        var inqId = state.activeInquiryId;
+        var input = document.getElementById('chat-input');
+        var text = input ? input.value.trim() : "";
+        if (!text || !inqId) return;
+        Store.sendMessage(inqId, text);
+        render();
       }
     });
 
@@ -1138,6 +1222,13 @@ window.FALLBACK_IMG =
 
     window.addEventListener("hashchange", function () {
       render({ scroll: true });
+    });
+    
+    // Custom event for real-time messaging updates
+    window.addEventListener('bayansell:new-message', function(e) {
+      if (parseHash().name === 'dashboard' && state.dashTab === 'messages' && state.activeInquiryId === e.detail.inquiryId) {
+        render();
+      }
     });
   }
 
