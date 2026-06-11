@@ -7,6 +7,7 @@ var Store = (function () {
   var LISTINGS_KEY = "bayansell:listings:v1";
   var FAVORITES_KEY = "bayansell:favorites:v1";
   var USER_KEY = "bayansell:user:v1";
+  var INQUIRIES_KEY = "bayansell:inquiries:v1";
 
   function read(key, fallback) {
     try {
@@ -72,7 +73,7 @@ var Store = (function () {
       seller: { name: (getUser() && getUser().name) || "You" },
       isMine: true,
       postedAt: new Date().toISOString(),
-      views: Math.floor(Math.random() * 5), // starts fresh
+      views: 0,
       inquiries: 0
     };
     var listings = read(LISTINGS_KEY, []);
@@ -86,6 +87,30 @@ var Store = (function () {
     return listing;
   }
 
+  function updateListing(id, data) {
+    var listings = read(LISTINGS_KEY, []);
+    var idx = -1;
+    for (var i = 0; i < listings.length; i++) {
+      if (listings[i].id === id) { idx = i; break; }
+    }
+    if (idx === -1) return null;
+    
+    var original = listings[idx];
+    listings[idx] = {
+      ...original,
+      title: data.title,
+      category: data.category,
+      price: Number(data.price),
+      condition: data.condition,
+      location: data.location,
+      description: data.description,
+      images: data.images && data.images.length ? data.images : original.images
+    };
+    
+    write(LISTINGS_KEY, listings);
+    return listings[idx];
+  }
+
   function deleteListing(id) {
     var listings = read(LISTINGS_KEY, []).filter(function (l) {
       return l.id !== id;
@@ -96,6 +121,97 @@ var Store = (function () {
       return f !== id;
     });
     write(FAVORITES_KEY, favs);
+    
+    // Also clean up inquiries
+    var inqs = read(INQUIRIES_KEY, []);
+    var filteredInqs = inqs.filter(function(i) { return i.listingId !== id; });
+    write(INQUIRIES_KEY, filteredInqs);
+  }
+
+  /* ---------- Inquiries / Messaging ---------- */
+
+  var MOCK_QUESTIONS = [
+    "Hi, is this still available?",
+    "Can we meet at Newport City?",
+    "Is the price negotiable?",
+    "I'm interested. What's the last price?",
+    "Does it come with the box?",
+    "When can I pick this up?",
+    "Is there any defect?",
+    "Still available?"
+  ];
+  
+  var MOCK_NAMES = ["Juan", "Maria", "Jerome", "Alyssa", "Kevin", "Patricia", "Mark"];
+
+  function getInquiries() {
+    var inqs = read(INQUIRIES_KEY, []);
+    var listings = getUserListings();
+    
+    // If we have listings but no inquiries, generate some mock ones
+    if (listings.length > 0 && inqs.length === 0) {
+      listings.forEach(function(l) {
+        var count = Math.floor(Math.random() * 3) + 1;
+        for (var i = 0; i < count; i++) {
+          var id = "inq-" + Math.random().toString(36).slice(2, 9);
+          var name = MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
+          inqs.push({
+            id: id,
+            listingId: l.id,
+            listingTitle: l.title,
+            buyerName: name,
+            messages: [
+              { sender: "buyer", text: MOCK_QUESTIONS[Math.floor(Math.random() * MOCK_QUESTIONS.length)], time: new Date(Date.now() - Math.random() * 86400000).toISOString() }
+            ]
+          });
+        }
+      });
+      write(INQUIRIES_KEY, inqs);
+    }
+    
+    // Sort inquiries by latest message time
+    inqs.sort(function(a, b) {
+      var timeA = new Date(a.messages[a.messages.length - 1].time);
+      var timeB = new Date(b.messages[b.messages.length - 1].time);
+      return timeB - timeA;
+    });
+    
+    return inqs;
+  }
+
+  function sendMessage(inquiryId, text) {
+    var inqs = read(INQUIRIES_KEY, []);
+    var idx = -1;
+    for (var i = 0; i < inqs.length; i++) {
+      if (inqs[i].id === inquiryId) { idx = i; break; }
+    }
+    if (idx === -1) return;
+
+    inqs[idx].messages.push({
+      sender: "seller",
+      text: text,
+      time: new Date().toISOString()
+    });
+    write(INQUIRIES_KEY, inqs);
+
+    // Auto-reply
+    var replies = ["Alright sweet!", "Got it, thanks!", "Sure, deal", "Sounds good.", "Okay, see you then!", "Thanks for the info."];
+    setTimeout(function() {
+      var freshInqs = read(INQUIRIES_KEY, []);
+      var freshIdx = -1;
+      for (var j = 0; j < freshInqs.length; j++) {
+        if (freshInqs[j].id === inquiryId) { freshIdx = j; break; }
+      }
+      if (freshIdx !== -1) {
+        freshInqs[freshIdx].messages.push({
+          sender: "buyer",
+          text: replies[Math.floor(Math.random() * replies.length)],
+          time: new Date().toISOString()
+        });
+        write(INQUIRIES_KEY, freshInqs);
+        // Dispatch event for UI update if on dashboard
+        window.dispatchEvent(new CustomEvent('bayansell:new-message', { detail: { inquiryId: inquiryId } }));
+      }
+    }, 2500);
   }
 
   /* ---------- Auth (mock) ---------- */
@@ -179,7 +295,10 @@ var Store = (function () {
     getAllListings: getAllListings,
     getById: getById,
     addListing: addListing,
+    updateListing: updateListing,
     deleteListing: deleteListing,
+    getInquiries: getInquiries,
+    sendMessage: sendMessage,
     getUser: getUser,
     setUser: setUser,
     logout: logout,
