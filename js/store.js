@@ -31,94 +31,105 @@ var Store = (function () {
   /* ---------- Listings ---------- */
 
   async function getAllListings() {
-    // We include seed data for now if DB is empty, or merge them.
-    // In a real migration, we'd seed the DB once.
-    const { data, error } = await window.supabaseClient
-      .from('listings')
-      .select('*, profiles(full_name)')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error("Supabase error:", error);
-      return SEED_LISTINGS; 
-    }
-    
-    const dbListings = data.map(l => ({
-      id: l.id,
-      title: l.title,
-      category: l.category,
-      price: Number(l.price),
-      condition: l.condition,
-      location: l.location,
-      description: l.description,
-      images: l.images || [],
-      seller: { name: l.profiles?.full_name || 'Anonymous' },
-      postedAt: l.created_at,
-      views: l.views || 0,
-      inquiries: l.inquiries_count || 0,
-      isMine: false // Will be updated in UI if matches current user
-    }));
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('listings')
+        .select('*, profiles(full_name)')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Supabase error:", error);
+        return window.SEED_LISTINGS || []; 
+      }
+      
+      const dbListings = (data || []).map(l => ({
+        id: l.id,
+        title: l.title,
+        category: l.category,
+        price: Number(l.price),
+        condition: l.condition,
+        location: l.location,
+        description: l.description,
+        images: l.images || [],
+        seller: { name: l.profiles?.full_name || 'Anonymous' },
+        postedAt: l.created_at,
+        views: l.views || 0,
+        inquiries: l.inquiries_count || 0,
+        isMine: false
+      }));
 
-    return dbListings.concat(SEED_LISTINGS);
+      return dbListings.concat(window.SEED_LISTINGS || []);
+    } catch (e) {
+      console.error("Critical error in getAllListings:", e);
+      return window.SEED_LISTINGS || [];
+    }
   }
 
   async function getUserListings() {
     const user = await getSessionUser();
     if (!user) return [];
 
-    const { data, error } = await window.supabaseClient
-      .from('listings')
-      .select('*, profiles(full_name)')
-      .eq('seller_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('listings')
+        .select('*, profiles(full_name)')
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (error) return [];
-    return data.map(l => ({
-      id: l.id,
-      title: l.title,
-      category: l.category,
-      price: Number(l.price),
-      condition: l.condition,
-      location: l.location,
-      description: l.description,
-      images: l.images || [],
-      seller: { name: user.name },
-      postedAt: l.created_at,
-      views: l.views || 0,
-      inquiries: l.inquiries_count || 0,
-      isMine: true
-    }));
+      if (error) return [];
+      return (data || []).map(l => ({
+        id: l.id,
+        title: l.title,
+        category: l.category,
+        price: Number(l.price),
+        condition: l.condition,
+        location: l.location,
+        description: l.description,
+        images: l.images || [],
+        seller: { name: user.name },
+        postedAt: l.created_at,
+        views: l.views || 0,
+        inquiries: l.inquiries_count || 0,
+        isMine: true
+      }));
+    } catch (e) {
+      return [];
+    }
   }
 
   async function getById(id) {
     if (String(id).startsWith('seed-')) {
-      return SEED_LISTINGS.find(l => l.id === id) || null;
+      return (window.SEED_LISTINGS || []).find(l => l.id === id) || null;
     }
 
-    const { data, error } = await window.supabaseClient
-      .from('listings')
-      .select('*, profiles(full_name)')
-      .eq('id', id)
-      .single();
-    
-    if (error) return null;
-    const user = await getSessionUser();
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('listings')
+        .select('*, profiles(full_name)')
+        .eq('id', id)
+        .single();
+      
+      if (error) return null;
+      const user = await getSessionUser();
 
-    return {
-      id: data.id,
-      title: data.title,
-      category: data.category,
-      price: Number(data.price),
-      condition: data.condition,
-      location: data.location,
-      description: data.description,
-      images: data.images || [],
-      seller: { name: data.profiles?.full_name || 'Anonymous' },
-      postedAt: data.created_at,
-      views: data.views || 0,
-      inquiries: data.inquiries_count || 0,
-      isMine: user ? data.seller_id === user.id : false
-    };
+      return {
+        id: data.id,
+        title: data.title,
+        category: data.category,
+        price: Number(data.price),
+        condition: data.condition,
+        location: data.location,
+        description: data.description,
+        images: data.images || [],
+        seller: { name: data.profiles?.full_name || 'Anonymous' },
+        postedAt: data.created_at,
+        views: data.views || 0,
+        inquiries: data.inquiries_count || 0,
+        isMine: user ? data.seller_id === user.id : false
+      };
+    } catch (e) {
+      return null;
+    }
   }
 
   async function addListing(data) {
@@ -173,7 +184,6 @@ var Store = (function () {
   /* ---------- Auth ---------- */
 
   async function login(email, password) {
-    // Simplification: In a real app, use Supabase Auth UI or proper fields
     const { data, error } = await window.supabaseClient.auth.signInWithPassword({
       email,
       password,
@@ -200,31 +210,39 @@ var Store = (function () {
   async function getFavorites() {
     const user = await getSessionUser();
     if (!user) return [];
-    const { data } = await window.supabaseClient
-      .from('favorites')
-      .select('listing_id')
-      .eq('user_id', user.id);
-    return (data || []).map(f => f.listing_id);
+    try {
+      const { data } = await window.supabaseClient
+        .from('favorites')
+        .select('listing_id')
+        .eq('user_id', user.id);
+      return (data || []).map(f => f.listing_id);
+    } catch (e) {
+      return [];
+    }
   }
 
   async function isFavorite(id) {
     const user = await getSessionUser();
     if (!user) return false;
-    const { data } = await window.supabaseClient
-      .from('favorites')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('listing_id', id)
-      .single();
-    return !!data;
+    try {
+      const { data } = await window.supabaseClient
+        .from('favorites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('listing_id', id)
+        .single();
+      return !!data;
+    } catch (e) {
+      return false;
+    }
   }
 
   async function toggleFavorite(id) {
     const user = await getSessionUser();
     if (!user) throw new Error("Log in to save items.");
     
-    const favId = await isFavorite(id);
-    if (favId) {
+    const favExists = await isFavorite(id);
+    if (favExists) {
       await window.supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('listing_id', id);
       return false;
     } else {
@@ -242,19 +260,24 @@ var Store = (function () {
     const user = await getSessionUser();
     if (!user) return [];
     
-    const { data } = await window.supabaseClient
-      .from('favorites')
-      .select('listings(*, profiles(full_name))')
-      .eq('user_id', user.id);
-      
-    return (data || []).map(f => {
-      const l = f.listings;
-      return {
-        ...l,
-        seller: { name: l.profiles?.full_name || 'Anonymous' },
-        postedAt: l.created_at
-      };
-    });
+    try {
+      const { data } = await window.supabaseClient
+        .from('favorites')
+        .select('listings(*, profiles(full_name))')
+        .eq('user_id', user.id);
+        
+      return (data || []).map(f => {
+        const l = f.listings;
+        if (!l) return null;
+        return {
+          ...l,
+          seller: { name: l.profiles?.full_name || 'Anonymous' },
+          postedAt: l.created_at
+        };
+      }).filter(Boolean);
+    } catch (e) {
+      return [];
+    }
   }
 
   /* ---------- Messaging ---------- */
@@ -263,23 +286,27 @@ var Store = (function () {
     const user = await getSessionUser();
     if (!user) return [];
     
-    const { data } = await window.supabaseClient
-      .from('inquiries')
-      .select('*, listings(title), messages(*)')
-      .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-      .order('updated_at', { ascending: false });
-      
-    return (data || []).map(i => ({
-      id: i.id,
-      listingId: i.listing_id,
-      listingTitle: i.listings?.title || 'Unknown Item',
-      buyerName: 'Buyer', // In real app, fetch profile
-      messages: i.messages.map(m => ({
-        sender: m.sender_id === user.id ? 'me' : 'them',
-        text: m.content,
-        time: m.created_at
-      }))
-    }));
+    try {
+      const { data } = await window.supabaseClient
+        .from('inquiries')
+        .select('*, listings(title), messages(*)')
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .order('updated_at', { ascending: false });
+        
+      return (data || []).map(i => ({
+        id: i.id,
+        listingId: i.listing_id,
+        listingTitle: i.listings?.title || 'Unknown Item',
+        buyerName: 'Buyer', 
+        messages: (i.messages || []).map(m => ({
+          sender: m.sender_id === user.id ? 'me' : 'them',
+          text: m.content,
+          time: m.created_at
+        }))
+      }));
+    } catch (e) {
+      return [];
+    }
   }
 
   async function sendMessage(inquiryId, text) {
