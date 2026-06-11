@@ -224,9 +224,11 @@ img { display: block; max-width: 100%; }
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
-  scrollbar-width: none;
+  scrollbar-width: auto; /* (2) Visible scroll indicators for desktop */
 }
-.category-row::-webkit-scrollbar { display: none; }
+.category-row::-webkit-scrollbar { display: block; height: 4px; }
+.category-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
 .category-pill {
   flex-shrink: 0;
   padding: 9px 16px;
@@ -622,10 +624,12 @@ img { display: block; max-width: 100%; }
   display: flex;
   gap: 30px;
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: auto; /* (2) Visible scroll indicators for desktop */
   padding-bottom: 2px;
 }
-.category-tabs::-webkit-scrollbar { display: none; }
+.category-tabs::-webkit-scrollbar { display: block; height: 4px; }
+.category-tabs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
 .cat-tab {
   flex-shrink: 0;
   display: flex;
@@ -813,6 +817,14 @@ img { display: block; max-width: 100%; }
   .gallery-side { grid-template-rows: none; grid-template-columns: 1fr 1fr; }
 }
 
+/* (3) Landscape mobile: Optimize sticky header and filters */
+@media (max-height: 480px) and (orientation: landscape) {
+  :root { --header-h: 48px; }
+  .site-header { position: absolute; } /* Un-stick to save height */
+  .filters { position: static; padding: 8px 0; }
+  .app { padding-top: 10px; }
+}
+
 /* ---- Tablet portrait: collapse two-column blocks, slim the chrome ---- */
 @media (max-width: 760px) {
   .app { padding: 0 20px 48px; }
@@ -831,18 +843,27 @@ img { display: block; max-width: 100%; }
 /* ---- Phones ---- */
 @media (max-width: 600px) {
 
-  /* (1) Single-column grid on phones — one card per row, full-width photos */
+  /* (1) 2-column grid on phones for better card readability */
   .grid {
-    grid-template-columns: 1fr;
-    gap: 22px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
   }
-  .card-title { font-size: 15px; }
-  .card-price { font-size: 15px; }
+  .card-title { font-size: 14px; }
+  .card-price { font-size: 14px; }
   .toolbar {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
     margin: 4px 0 14px;
+  }
+
+  /* (4) Limit gallery height on mobile so content isn't too deep */
+  .gallery {
+     max-height: 300px;
+     margin-bottom: 20px;
+  }
+  .gallery img {
+     max-height: 300px;
   }
 
   /* (4) 16px on every text field so iOS Safari never auto-zooms on focus */
