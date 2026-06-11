@@ -382,11 +382,15 @@ window.FALLBACK_IMG =
   }
 
   async function updateAuthUI() {
-    var user = await Store.getUser();
     var avatar = document.getElementById("account-avatar");
     if (!avatar) return;
-    if (user) { avatar.classList.add("has-user"); avatar.textContent = initials(user.name); }
-    else { avatar.classList.remove("has-user"); avatar.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.2-7 5v1h14v-1c0-2.8-3-5-7-5z"/></svg>'; }
+    try {
+      var user = await Store.getUser();
+      if (user) { avatar.classList.add("has-user"); avatar.textContent = initials(user.name); }
+      else { avatar.classList.remove("has-user"); avatar.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.2-7 5v1h14v-1c0-2.8-3-5-7-5z"/></svg>'; }
+    } catch (e) {
+      avatar.classList.remove("has-user"); avatar.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.2-7 5v1h14v-1c0-2.8-3-5-7-5z"/></svg>';
+    }
   }
 
   /* ------------------------- Dashboard --------------------------- */
@@ -445,9 +449,13 @@ window.FALLBACK_IMG =
   async function updateSavedBadge() {
     var badge = document.getElementById("saved-count");
     if (!badge) return;
-    var n = await Store.favoriteCount();
-    badge.textContent = n;
-    badge.hidden = n === 0;
+    try {
+      var n = await Store.favoriteCount();
+      badge.textContent = n;
+      badge.hidden = n === 0;
+    } catch (e) {
+      badge.hidden = true;
+    }
   }
 
   async function render(opts) {
