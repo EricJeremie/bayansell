@@ -196,7 +196,7 @@ window.FALLBACK_IMG =
     var sellerMeta = l.isMine ? "This is your listing" : "Member · Bayansell";
 
     var primaryAction = l.isMine ? '<button class="btn btn-primary btn-block" type="button" data-action="edit" data-id="' + esc(l.id) + '">Edit listing</button>' : '<button class="btn btn-primary btn-block" type="button" data-action="contact" data-id="' + esc(l.id) + '">Message seller</button>';
-    var actionsHTML = primaryAction + (l.isMine ? '<button class="btn btn-secondary btn-block" type="button" data-delete="' + esc(l.id) + '">Delete listing</button>' : '') + '<button class="btn btn-secondary btn-block" type="button" data-fav="' + esc(l.id) + '">' + (isFav ? "♥ Saved" : "♡ Save item") + "</button>" + '<button class="btn btn-secondary btn-block" type="button" data-action="share" data-id="' + esc(l.id) + '">Share</button>';
+    var actionsHTML = primaryAction + (l.isMine ? '<button class="btn btn-secondary btn-block" type="button" data-delete="' + esc(l.id) + '">Delete listing</button>' : '') + '<button class="btn btn-secondary btn-block' + favCls + '" type="button" data-fav="' + esc(l.id) + '">' + HEART_SVG + "<span>" + (isFav ? "Saved" : "Save item") + "</span></button>" + '<button class="btn btn-secondary btn-block" type="button" data-action="share" data-id="' + esc(l.id) + '">Share</button>';
 
     app.innerHTML = '<div class="detail"><button class="back-link" type="button" data-action="back">' + BACK_SVG + " Back</button><div class=\"detail-head\"><div><h1 class=\"detail-title\">" + esc(l.title) + "</h1><div class=\"detail-sub\">" + esc(l.category) + " · " + esc(l.location) + " · Posted " + formatDateRel(l.postedAt) + "</div></div><button class=\"detail-save" + favCls + "\" type=\"button\" data-fav=\"" + esc(l.id) + "\">" + HEART_SVG + "<span>" + (isFav ? "Saved" : "Save") + "</span></button></div>" +
       galleryHTML(l.images) +
@@ -683,7 +683,7 @@ window.FALLBACK_IMG =
             return '<div class="job-card"><div class="job-info"><h3>' + esc(j.role) + '</h3><div class="job-meta"><span>' + esc(j.team) + '</span><span>•</span><span>' + esc(j.type) + '</span><span>•</span><span>' + esc(j.place) + '</span></div></div><button class="btn btn-secondary" type="button" data-action="apply-job" data-role="' + esc(j.role) + '">Apply</button></div>';
           }).join("") + '</div></section>' +
           '<section class="page-section page-callout"><h2>Don\'t see your role?</h2><p>We\'re always glad to meet good people. Tell us how you\'d help and we\'ll keep you in mind.</p></section>' +
-          pageCtaHTML("Want to chat?", "Send us a note and our team will be in touch.", "Get in touch", "#/contact");
+          pageCtaHTML("Want to chat?", "Send us a note and our team will be in touch.", "Get in touch", "#/");
       },
     },
 

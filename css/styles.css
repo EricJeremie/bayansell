@@ -538,6 +538,10 @@ img { display: block; max-width: 100%; }
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 .btn-secondary:hover { background: var(--bg-soft); }
+.btn-secondary.is-fav { border-color: var(--rausch); color: var(--rausch); background: var(--rausch-soft); }
+.btn-secondary.is-fav:hover { filter: brightness(0.96); }
+.btn-secondary svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; }
+.btn-secondary.is-fav svg { fill: currentColor; }
 
 /* ============================= Post form ============================= */
 .form-page { max-width: 720px; margin: 0 auto; padding-top: 28px; }
