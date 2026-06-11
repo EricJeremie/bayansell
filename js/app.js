@@ -663,6 +663,8 @@ window.FALLBACK_IMG =
       var roleAction = user.role === "seller" ? "Switch to Buyer" : "Switch to Seller";
       var nextRole = user.role === "seller" ? "buyer" : "seller";
 
+      var dashboardLink = user.role === "seller" ? '<button class="menu-item bold" data-nav="#/dashboard">Dashboard</button>' : '';
+
       return (
         '<div class="menu-greeting"><strong>Hi, ' + esc(user.name.split(" ")[0]) + "</strong>" +
         "<span>" + esc(user.email || "") + "</span>" +
@@ -670,7 +672,8 @@ window.FALLBACK_IMG =
         '<div class="menu-sep"></div>' +
         '<button class="menu-item" data-action="toggle-role" data-role="' + nextRole + '">' + roleAction + "</button>" +
         '<div class="menu-sep"></div>' +
-        '<button class="menu-item bold" data-nav="#/my-listings">My listings</button>' +
+        dashboardLink +
+        '<button class="menu-item" data-nav="#/my-listings">My listings</button>' +
         savedItem +
         '<button class="menu-item" data-nav="#/post">Sell your item</button>' +
         '<div class="menu-sep"></div>' +
@@ -713,6 +716,78 @@ window.FALLBACK_IMG =
       avatar.innerHTML =
         '<svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.2-7 5v1h14v-1c0-2.8-3-5-7-5z"/></svg>';
     }
+  }
+
+  /* ------------------------- Dashboard --------------------------- */
+
+  function renderDashboard() {
+    var user = Store.getUser();
+    if (!user || user.role !== "seller") {
+      location.hash = "#/";
+      return;
+    }
+
+    var listings = Store.getUserListings();
+    var revenue = listings.reduce(function(sum, l) { return sum + l.price; }, 0);
+    var views = listings.reduce(function(sum, l) { return sum + (l.views || 0); }, 0);
+    var inquiries = listings.reduce(function(sum, l) { return sum + (l.inquiries || 0); }, 0);
+
+    var cats = {};
+    listings.forEach(function(l) { cats[l.category] = (cats[l.category] || 0) + 1; });
+    var sortedCats = Object.keys(cats).sort(function(a, b) { return cats[b] - cats[a]; });
+
+    var tableRows = listings.map(function(l) {
+      return (
+        '<tr>' +
+        '<td><div class="dash-item-cell">' + imgTag(l.images[0], "", "dash-thumb") + '<span>' + esc(l.title) + '</span></div></td>' +
+        '<td>' + formatPrice(l.price) + '</td>' +
+        '<td>' + formatDateAbs(l.postedAt) + '</td>' +
+        '<td>' + (l.views || 0) + '</td>' +
+        '<td><span class="status-badge">Active</span></td>' +
+        '<td><div class="dash-actions">' +
+        '<button class="icon-btn" title="Edit" data-action="edit-mock">✎</button>' +
+        '<button class="icon-btn danger" title="Delete" data-delete="' + esc(l.id) + '">✕</button>' +
+        '</div></td>' +
+        '</tr>'
+      );
+    }).join("");
+
+    var catRows = sortedCats.map(function(c) {
+      var count = cats[c];
+      var pct = Math.round((count / listings.length) * 100);
+      return (
+        '<div class="cat-perf-row">' +
+        '<div class="cat-perf-info"><span>' + esc(c) + '</span><span>' + count + ' items (' + pct + '%)</span></div>' +
+        '<div class="cat-perf-bar"><div style="width:' + pct + '%"></div></div>' +
+        '</div>'
+      );
+    }).join("");
+
+    app.innerHTML =
+      '<div class="dashboard-page">' +
+      '<header class="dash-header"><h1>Seller Dashboard</h1><p>Performance overview for ' + esc(user.name) + '</p></header>' +
+
+      '<div class="stats-grid">' +
+      '<div class="stat-card"><div class="stat-label">Active Listings</div><div class="stat-value">' + listings.length + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Potential Revenue</div><div class="stat-value">' + formatPrice(revenue) + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Total Views</div><div class="stat-value">' + views.toLocaleString() + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Total Inquiries</div><div class="stat-value">' + inquiries.toLocaleString() + '</div></div>' +
+      '</div>' +
+
+      '<div class="dash-grid">' +
+      '<section class="dash-section listings-section"><h2>Manage Listings</h2>' +
+      (listings.length ?
+        '<div class="table-wrap"><table><thead><tr><th>Item</th><th>Price</th><th>Posted</th><th>Views</th><th>Status</th><th>Actions</th></tr></thead>' +
+        '<tbody>' + tableRows + '</tbody></table></div>' :
+        '<div class="empty-dash"><p>No active listings. Start selling to see data here!</p><a class="btn btn-primary" href="#/post">Post an item</a></div>'
+      ) +
+      '</section>' +
+
+      '<section class="dash-section category-section"><h2>Category Distribution</h2>' +
+      '<div class="cat-perf-list">' + (catRows || '<p class="muted">No category data yet.</p>') + '</div>' +
+      '</section>' +
+      '</div>' +
+      '</div>';
   }
 
   /* ------------------------- My Listings --------------------------- */
@@ -824,6 +899,7 @@ window.FALLBACK_IMG =
     if (h === "/post") return { name: "post" };
     if (h === "/favorites") return { name: "favorites" };
     if (h === "/my-listings") return { name: "my-listings" };
+    if (h === "/dashboard") return { name: "dashboard" };
     return { name: "browse" };
   }
 
@@ -847,6 +923,7 @@ window.FALLBACK_IMG =
     else if (route.name === "post") renderPost();
     else if (route.name === "favorites") renderFavorites();
     else if (route.name === "my-listings") renderMyListings();
+    else if (route.name === "dashboard") renderDashboard();
     else renderBrowse();
 
     updateHeaderActive(route);
@@ -934,6 +1011,13 @@ window.FALLBACK_IMG =
         Store.switchRole("seller");
         toast("You are now a Seller! 💼");
         render();
+        return;
+      }
+
+      var editMock = e.target.closest('[data-action="edit-mock"]');
+      if (editMock) {
+        e.preventDefault();
+        toast("Edit feature is coming soon! 🛠️");
         return;
       }
 
@@ -1030,14 +1114,15 @@ window.FALLBACK_IMG =
             Store.logout();
             updateAuthUI();
             toast("You’ve been logged out");
-            if (parseHash().name === "my-listings") location.hash = "#/";
+            if (parseHash().name === "my-listings" || parseHash().name === "dashboard") location.hash = "#/";
             else render();
           } else if (a === "toggle-role") {
             var next = act.getAttribute("data-role");
             Store.switchRole(next);
             toggleAccountMenu(false);
             toast("Account switched to " + (next === "seller" ? "Seller" : "Buyer"));
-            render();
+            if (next === "buyer" && parseHash().name === "dashboard") location.hash = "#/";
+            else render();
           }
         }
       });
