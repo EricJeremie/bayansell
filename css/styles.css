@@ -274,7 +274,7 @@ img { display: block; max-width: 100%; }
 }
 .category-pill:hover { border-color: var(--text); color: var(--text); }
 .category-pill.active {
-  color: #fff;
+  color: var(--bg);
   background: var(--text);
   border-color: var(--text);
 }
@@ -377,11 +377,12 @@ img { display: block; max-width: 100%; }
 .fav-btn svg {
   width: 24px;
   height: 24px;
-  fill: rgba(0, 0, 0, 0.5);
+  fill: rgba(0, 0, 0, 0.4);
   stroke: #fff;
   stroke-width: 2;
   transition: transform 0.12s ease, fill 0.15s ease;
 }
+[data-theme="dark"] .fav-btn svg { fill: rgba(255, 255, 255, 0.2); }
 .fav-btn:hover svg { transform: scale(1.1); }
 .fav-btn.is-fav svg { fill: var(--rausch); stroke: #fff; }
 
