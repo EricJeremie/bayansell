@@ -20,8 +20,10 @@ var Store = (function () {
       return {
         id: user.id,
         email: user.email,
-        name: profile ? profile.full_name : user.user_metadata.full_name || 'User',
-        role: profile ? profile.role : 'buyer'
+        name: (profile && profile.full_name) ||
+              (user.user_metadata && user.user_metadata.full_name) ||
+              (user.email ? user.email.split('@')[0] : 'User'),
+        role: (profile && profile.role) || 'buyer'
       };
     } catch (e) {
       return null;
@@ -122,6 +124,7 @@ var Store = (function () {
         description: data.description,
         images: data.images || [],
         seller: { name: data.profiles?.full_name || 'Anonymous' },
+        sellerId: data.seller_id,
         postedAt: data.created_at,
         views: data.views || 0,
         inquiries: data.inquiries_count || 0,
@@ -192,6 +195,18 @@ var Store = (function () {
     return data.user;
   }
 
+  // Returns { user, needsConfirmation } — needsConfirmation is true when the
+  // project requires email verification before the first login.
+  async function signup(name, email, password, role) {
+    const { data, error } = await window.supabaseClient.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name, role: role } },
+    });
+    if (error) throw error;
+    return { user: data.user, needsConfirmation: !data.session };
+  }
+
   async function logout() {
     await window.supabaseClient.auth.signOut();
   }
@@ -199,29 +214,54 @@ var Store = (function () {
   async function switchRole(role) {
     const user = await getSessionUser();
     if (!user) return;
-    await window.supabaseClient
+    const { error } = await window.supabaseClient
       .from('profiles')
-      .update({ role: role })
-      .eq('id', user.id);
+      .upsert({ id: user.id, full_name: user.name, role: role });
+    if (error) throw error;
   }
 
   /* ---------- Favorites ---------- */
+  // Seed (demo) listings aren't rows in the database — their ids are not
+  // UUIDs — so favorites for them live in localStorage. Real listings are
+  // saved in the favorites table.
 
-  async function getFavorites() {
-    const user = await getSessionUser();
-    if (!user) return [];
+  var SEED_FAVS_KEY = "bayansell:seedfavs:v1";
+
+  function isSeedId(id) {
+    return String(id).indexOf("seed-") === 0;
+  }
+
+  function getSeedFavs() {
     try {
-      const { data } = await window.supabaseClient
-        .from('favorites')
-        .select('listing_id')
-        .eq('user_id', user.id);
-      return (data || []).map(f => f.listing_id);
+      return JSON.parse(localStorage.getItem(SEED_FAVS_KEY)) || [];
     } catch (e) {
       return [];
     }
   }
 
+  function setSeedFavs(favs) {
+    try {
+      localStorage.setItem(SEED_FAVS_KEY, JSON.stringify(favs));
+    } catch (e) { /* ignore */ }
+  }
+
+  async function getFavorites() {
+    const seedFavs = getSeedFavs();
+    const user = await getSessionUser();
+    if (!user) return seedFavs;
+    try {
+      const { data } = await window.supabaseClient
+        .from('favorites')
+        .select('listing_id')
+        .eq('user_id', user.id);
+      return seedFavs.concat((data || []).map(f => f.listing_id));
+    } catch (e) {
+      return seedFavs;
+    }
+  }
+
   async function isFavorite(id) {
+    if (isSeedId(id)) return getSeedFavs().indexOf(id) !== -1;
     const user = await getSessionUser();
     if (!user) return false;
     try {
@@ -238,9 +278,18 @@ var Store = (function () {
   }
 
   async function toggleFavorite(id) {
+    if (isSeedId(id)) {
+      const favs = getSeedFavs();
+      const idx = favs.indexOf(id);
+      if (idx === -1) favs.push(id);
+      else favs.splice(idx, 1);
+      setSeedFavs(favs);
+      return idx === -1;
+    }
+
     const user = await getSessionUser();
     if (!user) throw new Error("Log in to save items.");
-    
+
     const favExists = await isFavorite(id);
     if (favExists) {
       await window.supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('listing_id', id);
@@ -257,16 +306,17 @@ var Store = (function () {
   }
 
   async function getFavoriteListings() {
+    const seeds = (window.SEED_LISTINGS || []).filter(l => getSeedFavs().indexOf(l.id) !== -1);
     const user = await getSessionUser();
-    if (!user) return [];
-    
+    if (!user) return seeds;
+
     try {
       const { data } = await window.supabaseClient
         .from('favorites')
         .select('listings(*, profiles(full_name))')
         .eq('user_id', user.id);
-        
-      return (data || []).map(f => {
+
+      const dbFavs = (data || []).map(f => {
         const l = f.listings;
         if (!l) return null;
         return {
@@ -275,8 +325,10 @@ var Store = (function () {
           postedAt: l.created_at
         };
       }).filter(Boolean);
+
+      return dbFavs.concat(seeds);
     } catch (e) {
-      return [];
+      return seeds;
     }
   }
 
@@ -285,19 +337,20 @@ var Store = (function () {
   async function getInquiries() {
     const user = await getSessionUser();
     if (!user) return [];
-    
+
     try {
       const { data } = await window.supabaseClient
         .from('inquiries')
-        .select('*, listings(title), messages(*)')
+        .select('*, listings(title), messages(*), buyer:profiles!inquiries_buyer_id_fkey(full_name)')
         .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-        .order('updated_at', { ascending: false });
-        
+        .order('updated_at', { ascending: false })
+        .order('created_at', { referencedTable: 'messages', ascending: true });
+
       return (data || []).map(i => ({
         id: i.id,
         listingId: i.listing_id,
         listingTitle: i.listings?.title || 'Unknown Item',
-        buyerName: 'Buyer', 
+        buyerName: i.buyer?.full_name || 'Buyer',
         messages: (i.messages || []).map(m => ({
           sender: m.sender_id === user.id ? 'me' : 'them',
           text: m.content,
@@ -307,6 +360,22 @@ var Store = (function () {
     } catch (e) {
       return [];
     }
+  }
+
+  // Starts a conversation about a listing with its first message.
+  async function createInquiry(listingId, sellerId, text) {
+    const user = await getSessionUser();
+    if (!user) throw new Error("Log in to message sellers.");
+
+    const { data: inquiry, error } = await window.supabaseClient
+      .from('inquiries')
+      .insert([{ listing_id: listingId, buyer_id: user.id, seller_id: sellerId }])
+      .select()
+      .single();
+    if (error) throw error;
+
+    await sendMessage(inquiry.id, text);
+    return inquiry;
   }
 
   async function sendMessage(inquiryId, text) {
@@ -327,8 +396,11 @@ var Store = (function () {
     updateListing,
     deleteListing,
     getInquiries,
+    createInquiry,
     sendMessage,
     getUser: getSessionUser,
+    login,
+    signup,
     logout,
     switchRole,
     getFavorites,

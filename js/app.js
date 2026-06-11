@@ -345,28 +345,95 @@ window.FALLBACK_IMG =
     if (input) input.classList.toggle("input-error", !!msg);
   }
 
-  /* ------------------------ Auth (mock login) ---------------------- */
+  /* ------------------------ Auth (Supabase) ------------------------ */
 
-  function openAuthModal(afterAuth) {
-    var overlay = openModal("Log in or sign up", "<h2>Welcome to Bayansell</h2><p class=\"modal-sub\">Log in or sign up to sell your items and message sellers.</p><form id=\"auth-form\" novalidate><div class=\"field\"><label for=\"auth-name\">Name</label><input class=\"input\" id=\"auth-name\" type=\"text\" placeholder=\"e.g. Juan dela Cruz\" /><div class=\"error-text\" data-err=\"auth-name\" hidden></div></div><div class=\"field\"><label for=\"auth-email\">Email</label><input class=\"input\" id=\"auth-email\" type=\"email\" placeholder=\"you@email.com\" /><div class=\"error-text\" data-err=\"auth-email\" hidden></div></div><div class=\"field\"><label for=\"auth-role\">I want to...</label><select class=\"select\" id=\"auth-role\"><option value=\"buyer\">Buy and browse</option><option value=\"seller\">Sell items</option></select></div><button class=\"btn btn-primary btn-block\" type=\"submit\">Continue</button></form>");
+  function showAuthError(msg) {
+    var box = document.querySelector('[data-err="auth-form"]');
+    if (box) { box.textContent = msg || ""; box.hidden = !msg; }
+  }
+
+  function openAuthModal(afterAuth, mode) {
+    mode = mode || "login";
+    var isLogin = mode === "login";
+
+    var fields =
+      (isLogin ? "" : '<div class="field"><label for="auth-name">Name</label><input class="input" id="auth-name" type="text" placeholder="e.g. Juan dela Cruz" /><div class="error-text" data-err="auth-name" hidden></div></div>') +
+      '<div class="field"><label for="auth-email">Email</label><input class="input" id="auth-email" type="email" placeholder="you@email.com" autocomplete="email" /><div class="error-text" data-err="auth-email" hidden></div></div>' +
+      '<div class="field"><label for="auth-password">Password</label><input class="input" id="auth-password" type="password" placeholder="' + (isLogin ? "Your password" : "At least 6 characters") + '" autocomplete="' + (isLogin ? "current-password" : "new-password") + '" /><div class="error-text" data-err="auth-password" hidden></div></div>' +
+      (isLogin ? "" : '<div class="field"><label for="auth-role">I want to...</label><select class="select" id="auth-role"><option value="buyer">Buy and browse</option><option value="seller">Sell items</option></select></div>');
+
+    var overlay = openModal(isLogin ? "Log in" : "Sign up",
+      "<h2>Welcome to Bayansell</h2><p class=\"modal-sub\">" + (isLogin ? "Log in to sell your items and message sellers." : "Create an account to sell your items and message sellers.") + "</p>" +
+      '<form id="auth-form" novalidate>' + fields +
+      '<div class="error-text" data-err="auth-form" hidden style="margin-bottom:12px"></div>' +
+      '<button class="btn btn-primary btn-block" type="submit" id="auth-submit">' + (isLogin ? "Log in" : "Create account") + '</button></form>' +
+      '<p class="modal-sub" style="margin-top:14px;text-align:center">' + (isLogin ? 'New to Bayansell? <button type="button" class="link-btn" data-auth-switch="signup">Sign up</button>' : 'Already have an account? <button type="button" class="link-btn" data-auth-switch="login">Log in</button>') + "</p>");
+
+    overlay.querySelector("[data-auth-switch]").addEventListener("click", function () {
+      openAuthModal(afterAuth, this.getAttribute("data-auth-switch"));
+    });
+
     overlay.querySelector("#auth-form").addEventListener("submit", async function (e) {
       e.preventDefault();
-      var name = document.getElementById("auth-name").value.trim();
+      showAuthError("");
       var email = document.getElementById("auth-email").value.trim();
-      var role = document.getElementById("auth-role").value;
+      var password = document.getElementById("auth-password").value;
+      var nameEl = document.getElementById("auth-name");
+      var name = nameEl ? nameEl.value.trim() : "";
+      var roleEl = document.getElementById("auth-role");
+      var role = roleEl ? roleEl.value : "buyer";
+
       var ok = true;
-      setFieldError("auth-name", name ? "" : "Please enter your name."); if (!name) ok = false;
+      if (!isLogin) { setFieldError("auth-name", name ? "" : "Please enter your name."); if (!name) ok = false; }
       var emailOk = /.+@.+\..+/.test(email);
       setFieldError("auth-email", emailOk ? "" : "Please enter a valid email."); if (!emailOk) ok = false;
+      var passMsg = !password ? "Please enter a password." : (!isLogin && password.length < 6) ? "Password must be at least 6 characters." : "";
+      setFieldError("auth-password", passMsg); if (passMsg) ok = false;
       if (!ok) return;
-      // Store.setUser({ name: name, email: email, role: role }); // If we had a setUser
-      closeModal();
-      await updateAuthUI();
-      await render();
-      toast("Welcome, " + name.split(" ")[0] + "! 👋");
-      if (typeof afterAuth === "function") afterAuth();
+
+      var btn = document.getElementById("auth-submit");
+      if (btn) { btn.disabled = true; btn.textContent = isLogin ? "Logging in..." : "Creating account..."; }
+
+      try {
+        if (isLogin) {
+          await Store.login(email, password);
+          closeModal();
+          await updateAuthUI();
+          await render();
+          var u = null; try { u = await Store.getUser(); } catch (err) {}
+          toast("Welcome back" + (u && u.name ? ", " + u.name.split(" ")[0] : "") + "! 👋");
+          if (typeof afterAuth === "function") afterAuth();
+        } else {
+          var res = await Store.signup(name, email, password, role);
+          if (res.needsConfirmation) {
+            overlay.querySelector(".modal-body").innerHTML =
+              "<h2>Check your email 📬</h2><p class=\"modal-sub\">We sent a confirmation link to <strong>" + esc(email) + "</strong>. Open it to verify your account, then come back and log in.</p>" +
+              '<button class="btn btn-primary btn-block" type="button" id="auth-goto-login">Go to log in</button>';
+            overlay.querySelector("#auth-goto-login").addEventListener("click", function () {
+              openAuthModal(afterAuth, "login");
+            });
+          } else {
+            closeModal();
+            await updateAuthUI();
+            await render();
+            toast("Welcome, " + name.split(" ")[0] + "! 👋");
+            if (typeof afterAuth === "function") afterAuth();
+          }
+        }
+      } catch (err) {
+        var msg = (err && err.message) || "Something went wrong. Please try again.";
+        if (/invalid login credentials/i.test(msg)) msg = "Wrong email or password.";
+        else if (/email not confirmed/i.test(msg)) msg = "Please confirm your email first — check your inbox for the link we sent you.";
+        else if (/already registered/i.test(msg)) msg = "That email is already registered. Try logging in instead.";
+        showAuthError(msg);
+        if (btn) { btn.disabled = false; btn.textContent = isLogin ? "Log in" : "Create account"; }
+      }
     });
-    setTimeout(function () { var n = document.getElementById("auth-name"); if (n) n.focus(); }, 60);
+
+    setTimeout(function () {
+      var first = document.getElementById(isLogin ? "auth-email" : "auth-name");
+      if (first) first.focus();
+    }, 60);
   }
 
   /* ----------------------- Account dropdown ------------------------ */
@@ -380,7 +447,7 @@ window.FALLBACK_IMG =
       var roleAction = user.role === "seller" ? "Switch to Buyer" : "Switch to Seller";
       var nextRole = user.role === "seller" ? "buyer" : "seller";
       var dashboardLink = user.role === "seller" ? '<button class="menu-item bold" data-nav="#/dashboard">Dashboard</button>' : '';
-      return '<div class="menu-greeting"><strong>Hi, ' + esc(user.name.split(" ")[0]) + "</strong><span>" + esc(user.email || "") + '</span><span style="font-size:11px;color:var(--rausch);font-weight:700;margin-top:4px;display:block">' + roleText + '</span></div><div class="menu-sep"></div><button class="menu-item" data-action="toggle-role" data-role="' + nextRole + '">' + roleAction + '</button><div class="menu-sep"></div>' + dashboardLink + '<button class="menu-item" data-nav="#/my-listings">My listings</button>' + savedItem + '<button class="menu-item" data-nav="#/post">Sell your item</button><div class="menu-sep"></div><button class="menu-item" data-action="logout">Log out</button>';
+      return '<div class="menu-greeting"><strong>Hi, ' + esc((user.name || "User").split(" ")[0]) + "</strong><span>" + esc(user.email || "") + '</span><span style="font-size:11px;color:var(--rausch);font-weight:700;margin-top:4px;display:block">' + roleText + '</span></div><div class="menu-sep"></div><button class="menu-item" data-action="toggle-role" data-role="' + nextRole + '">' + roleAction + '</button><div class="menu-sep"></div>' + dashboardLink + '<button class="menu-item" data-nav="#/my-listings">My listings</button>' + savedItem + '<button class="menu-item" data-nav="#/post">Sell your item</button><div class="menu-sep"></div><button class="menu-item" data-action="logout">Log out</button>';
     }
     return '<button class="menu-item bold" data-action="login">Log in</button><button class="menu-item" data-action="login">Sign up</button><div class="menu-sep"></div><button class="menu-item" data-nav="#/post">Sell your item</button>' + savedItem;
   }
@@ -439,10 +506,26 @@ window.FALLBACK_IMG =
   async function openContactModal(id) {
     var l = null; try { l = await Store.getById(id); } catch(e) {} if (!l) return;
     var user = null; try { user = await Store.getUser(); } catch(e) {}
+    var isDemoListing = String(l.id).indexOf("seed-") === 0 || !l.sellerId;
     var cover = (l.images && l.images[0]) || window.FALLBACK_IMG;
     var sellerName = l.seller ? l.seller.name : "Anonymous";
-    var overlay = openModal("Contact seller", "<h2>Message " + esc(sellerName) + '</h2><p class="modal-sub">Ask about this item. This is a demo — nothing is actually sent.</p><div class="modal-summary"><img src="' + esc(cover) + '" onerror="this.onerror=null;this.src=FALLBACK_IMG" alt=""><div class=\"ms-title\">' + esc(l.title) + '</div><div class="ms-price">' + formatPrice(l.price) + " · " + esc(l.location) + '</div></div><form id="contact-form" novalidate><div class="field"><label for="c-name">Your name</label><input class="input" id="c-name" type="text" value="' + esc(user ? user.name : "") + '" placeholder="Your name" /><div class="error-text" data-err="c-name" hidden></div></div><div class="field"><label for="c-message">Message</label><textarea class="textarea" id="c-message" placeholder="Hi! Is this still available?">Hi! Is this still available?</textarea><div class="error-text" data-err="c-message" hidden></div></div><button class="btn btn-primary btn-block" type="submit">Send message</button></form>');
-    overlay.querySelector("#contact-form").addEventListener("submit", function (e) { e.preventDefault(); closeModal(); toast("Message sent to " + sellerName.split(" ")[0] + "! ✉️"); });
+    var sub = isDemoListing ? "Ask about this item. This is a sample listing — nothing is actually sent." : "Ask about this item. The seller will see your message in their dashboard.";
+    var overlay = openModal("Contact seller", "<h2>Message " + esc(sellerName) + '</h2><p class="modal-sub">' + sub + '</p><div class="modal-summary"><img src="' + esc(cover) + '" onerror="this.onerror=null;this.src=FALLBACK_IMG" alt=""><div class=\"ms-title\">' + esc(l.title) + '</div><div class="ms-price">' + formatPrice(l.price) + " · " + esc(l.location) + '</div></div><form id="contact-form" novalidate><div class="field"><label for="c-name">Your name</label><input class="input" id="c-name" type="text" value="' + esc(user ? user.name : "") + '" placeholder="Your name" /><div class="error-text" data-err="c-name" hidden></div></div><div class="field"><label for="c-message">Message</label><textarea class="textarea" id="c-message" placeholder="Hi! Is this still available?">Hi! Is this still available?</textarea><div class="error-text" data-err="c-message" hidden></div></div><button class="btn btn-primary btn-block" type="submit">Send message</button></form>');
+    overlay.querySelector("#contact-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var msgEl = document.getElementById("c-message");
+      var text = msgEl ? msgEl.value.trim() : "";
+      setFieldError("c-message", text ? "" : "Please write a message."); if (!text) return;
+      if (isDemoListing) { closeModal(); toast("Message sent to " + sellerName.split(" ")[0] + "! ✉️"); return; }
+      if (!user) { closeModal(); openAuthModal(function () { openContactModal(id); }); return; }
+      try {
+        await Store.createInquiry(l.id, l.sellerId, text);
+        closeModal();
+        toast("Message sent to " + sellerName.split(" ")[0] + "! ✉️");
+      } catch (err) {
+        toast((err && err.message) || "Could not send your message.");
+      }
+    });
   }
 
   /* ----------------------------- Router ---------------------------- */
@@ -491,7 +574,7 @@ window.FALLBACK_IMG =
       await render();
       window.scrollTo(0, y);
       toast(nowFav ? "Saved to your favorites ♥" : "Removed from favorites");
-    } catch (e) { toast("Log in to save"); }
+    } catch (e) { toast((e && e.message) || "Log in to save items."); }
   }
 
   function shareListing(id) {
