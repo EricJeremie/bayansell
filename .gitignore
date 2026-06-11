@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Vercel
+.vercel
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Node (not used, but safe)
+node_modules/

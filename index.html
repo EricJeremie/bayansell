@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bayansell — Buy & sell with your community</title>
+  <meta name="description" content="Bayansell is a marketplace where you can post your items and browse great finds from people across the Philippines." />
+  <link rel="preconnect" href="https://images.unsplash.com" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%232563EB' d='M16 2c4 6 8 9 8 14a8 8 0 1 1-16 0c0-5 4-8 8-14z'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <!-- ===== Header ===== -->
+  <header class="site-header" id="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#/" aria-label="Bayansell home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 3c3.7 5.7 7.6 8.6 7.6 13.4A7.6 7.6 0 0 1 16 24a7.6 7.6 0 0 1-7.6-7.6C8.4 11.6 12.3 8.7 16 3z" fill="currentColor"/>
+          <circle cx="16" cy="16.5" r="3.1" fill="#fff"/>
+        </svg>
+        <span class="brand-name">bayansell</span>
+      </a>
+
+      <form class="searchbar" id="searchbar" role="search">
+        <input
+          type="search"
+          id="search-input"
+          class="searchbar-input"
+          placeholder="Search items, brands, or places"
+          autocomplete="off"
+          aria-label="Search items"
+        />
+        <button type="submit" class="searchbar-btn" aria-label="Search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 1 0 4.55 13.46l4.74 4.75 1.42-1.42-4.75-4.74A7.5 7.5 0 0 0 10.5 3zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z"/></svg>
+        </button>
+      </form>
+
+      <nav class="header-actions" aria-label="Primary">
+        <a href="#/post" class="sell-link">Sell your item</a>
+        <a href="#/favorites" class="icon-link" id="saved-link" aria-label="Saved items">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-10-9.2C.4 8.4 2.1 4.8 5.6 4.8c2 0 3.4 1.1 4.4 2.6 1-1.5 2.4-2.6 4.4-2.6 3.5 0 5.2 3.6 3.6 7C19.5 16.4 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span class="icon-link-label">Saved</span>
+          <span class="saved-count" id="saved-count" hidden>0</span>
+        </a>
+        <div class="account-wrap">
+          <button class="account-btn" id="account-btn" type="button" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
+            <svg class="account-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span class="account-avatar" id="account-avatar" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.2-7 5v1h14v-1c0-2.8-3-5-7-5z"/></svg>
+            </span>
+          </button>
+          <div id="account-menu" class="account-popover" hidden></div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== App view mounts here ===== -->
+  <main id="app" class="app"></main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-col">
+        <h4>Bayansell</h4>
+        <a href="#/">Browse items</a>
+        <a href="#/post">Sell your item</a>
+        <a href="#/favorites">Saved items</a>
+      </div>
+      <div class="footer-col">
+        <h4>Community</h4>
+        <a href="#/">How it works</a>
+        <a href="#/">Safety tips</a>
+        <a href="#/">Help center</a>
+      </div>
+      <div class="footer-col">
+        <h4>About</h4>
+        <a href="#/">Our story</a>
+        <a href="#/">Careers</a>
+        <a href="#/">Contact</a>
+      </div>
+    </div>
+    <div class="footer-bar">
+      <span>© <span id="year"></span> Bayansell · Buy &amp; sell with your community</span>
+      <span class="footer-meta">Made in the Philippines 🇵🇭 · Frontend demo</span>
+    </div>
+  </footer>
+
+  <!-- ===== Scripts (classic, ordered) ===== -->
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
