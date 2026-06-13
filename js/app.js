@@ -22,6 +22,7 @@ window.FALLBACK_IMG =
   var state = {
     search: "",
     category: "All",
+    location: "",
     sort: "newest",
     dashTab: "listings",
     activeInquiryId: null
@@ -135,12 +136,14 @@ window.FALLBACK_IMG =
     }
     var q = state.search.trim().toLowerCase();
     var cat = state.category;
+    var loc = state.location;
 
     var list = all.filter(function (l) {
       var matchCat = cat === "All" || l.category === cat;
+      var matchLoc = !loc || l.location === loc;
       var hay = (l.title + " " + (l.description||"") + " " + (l.location || "") + " " + (l.category || "")).toLowerCase();
       var matchQ = !q || hay.indexOf(q) !== -1;
-      return matchCat && matchQ;
+      return matchCat && matchLoc && matchQ;
     });
 
     if (state.sort === "price-asc") list.sort((a, b) => a.price - b.price);
@@ -155,18 +158,33 @@ window.FALLBACK_IMG =
     return '<div class="filters"><div class="category-tabs">' + cats.map(c => '<button type="button" class="cat-tab' + (state.category === c ? " active" : "") + '" data-cat="' + esc(c) + '">' + iconSvg(c) + "<span>" + esc(c) + "</span></button>").join("") + "</div></div>";
   }
 
+  // Quick location pills for the Newport City, Pasay audience.
+  function areaRowHTML() {
+    var areas = window.NEWPORT_LOCATIONS || [];
+    if (!areas.length) return "";
+    var pinSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.4" fill="currentColor"/></svg>';
+    var pills = [{ label: "All areas", value: "" }].concat(areas.map(function (a) { return { label: a, value: a }; }));
+    return '<div class="area-filter"><div class="area-filter-label">' + pinSvg + '<span>' + esc(window.NEWPORT_AREA || "Newport City, Pasay") + '</span></div>' +
+      '<div class="area-pills">' + pills.map(function (p) {
+        return '<button type="button" class="area-pill' + (state.location === p.value ? " active" : "") + '" data-area="' + esc(p.value) + '">' + esc(p.label) + "</button>";
+      }).join("") + "</div></div>";
+  }
+
   function toolbarHTML(count) {
     var label = count === 1 ? "1 item" : count.toLocaleString("en-US") + " items";
     function opt(v, t) { return '<option value="' + v + '"' + (state.sort === v ? " selected" : "") + ">" + t + "</option>"; }
-    return '<div class="toolbar"><div class="results-count">' + label + (state.category !== "All" ? " in " + esc(state.category) : "") + (state.search ? ' for “' + esc(state.search) + "”" : "") + '</div><div class="sort-control"><label for="sort-select">Sort by</label><select class="sort-select" id="sort-select">' + opt("newest", "Newest") + opt("price-asc", "Price: low to high") + opt("price-desc", "Price: high to low") + "</select></div></div>";
+    return '<div class="toolbar"><div class="results-count">' + label + (state.category !== "All" ? " in " + esc(state.category) : "") + (state.location ? " · " + esc(state.location) : "") + (state.search ? ' for “' + esc(state.search) + "”" : "") + '</div><div class="sort-control"><label for="sort-select">Sort by</label><select class="sort-select" id="sort-select">' + opt("newest", "Newest") + opt("price-asc", "Price: low to high") + opt("price-desc", "Price: high to low") + "</select></div></div>";
   }
 
   async function renderBrowse() {
     app.innerHTML = '<div class="loading-state">Finding deals...</div>';
     var list = await getFilteredListings();
     var hero = '<section class="hero"><h1>Find your next great deal</h1><p>Buy and sell preloved and brand-new items with people across the Philippines.</p></section>';
-    var body = list.length === 0 ? '<div class="empty"><div class="emoji">🔍</div><h2>No items found</h2><p>Try a different keyword or category.</p><button class="btn btn-secondary" data-action="clear">Clear filters</button></div>' : toolbarHTML(list.length) + await gridHTML(list);
-    app.innerHTML = hero + categoryRowHTML() + body;
+    var emptyMsg = state.location
+      ? '<div class="empty"><div class="emoji">📍</div><h2>Nothing in ' + esc(state.location) + ' yet</h2><p>Be the first to list an item here, or browse all areas.</p><button class="btn btn-secondary" data-action="clear">Show all areas</button></div>'
+      : '<div class="empty"><div class="emoji">🔍</div><h2>No items found</h2><p>Try a different keyword or category.</p><button class="btn btn-secondary" data-action="clear">Clear filters</button></div>';
+    var body = list.length === 0 ? emptyMsg : toolbarHTML(list.length) + await gridHTML(list);
+    app.innerHTML = hero + categoryRowHTML() + areaRowHTML() + body;
   }
 
   /* ----------------------------- Detail ---------------------------- */
@@ -213,6 +231,18 @@ window.FALLBACK_IMG =
     return '<option value="" disabled' + (!selected ? " selected" : "") + ">" + esc(placeholder) + "</option>" + arr.map(function (v) { return '<option value="' + esc(v) + '"' + (v === selected ? " selected" : "") + ">" + esc(v) + "</option>"; }).join("");
   }
 
+  // Location select with Newport City, Pasay grouped above the other cities.
+  function locationSelectOptions(selected) {
+    function optsFor(arr) {
+      return arr.map(function (v) { return '<option value="' + esc(v) + '"' + (v === selected ? " selected" : "") + ">" + esc(v) + "</option>"; }).join("");
+    }
+    var newport = window.NEWPORT_LOCATIONS || [];
+    var cities = window.PH_CITIES || [];
+    return '<option value="" disabled' + (!selected ? " selected" : "") + ">Select a location</option>" +
+      (newport.length ? '<optgroup label="' + esc(window.NEWPORT_AREA || "Newport City, Pasay") + '">' + optsFor(newport) + "</optgroup>" : "") +
+      '<optgroup label="Other cities">' + optsFor(cities) + "</optgroup>";
+  }
+
   async function renderPost(editId) {
     var user = null;
     try { user = await Store.getUser(); } catch(e) {}
@@ -223,14 +253,14 @@ window.FALLBACK_IMG =
     if (editId) { try { l = await Store.getById(editId); } catch(e) {} }
     if (editId && (!l || !l.isMine)) { location.hash = "#/"; return; }
     
-    pendingImages = l ? l.images.slice() : [];
+    pendingImages = l ? l.images.map(function (u) { return { previewUrl: "", url: u, status: "done" }; }) : [];
     var title = l ? "Edit your listing" : "Sell your item";
     var btnText = l ? "Save changes" : "Post item";
 
     app.innerHTML = '<div class="form-page"><h1>' + title + '</h1><p class="lead">List your item in a couple of minutes. Add clear photos and an honest description to sell faster.</p><form id="post-form" novalidate data-edit-id="' + (editId || "") + '">' +
       '<div class="field"><label for="pf-title">Title</label><input class="input" id="pf-title" type="text" maxlength="80" value="' + esc(l ? l.title : "") + '" placeholder="e.g. iPhone 14 Pro 256GB - Deep Purple" /><div class="error-text" data-err="title" hidden></div></div>' +
       '<div class="field-row"><div class="field"><label for="pf-category">Category</label><select class="select" id="pf-category">' + selectOptions(window.CATEGORIES || [], "Select a category", l ? l.category : null) + '</select><div class="error-text" data-err="category" hidden></div></div><div class="field"><label for="pf-condition">Condition</label><select class="select" id="pf-condition">' + selectOptions(window.CONDITIONS || [], "Select condition", l ? l.condition : null) + '</select><div class="error-text" data-err="condition" hidden></div></div></div>' +
-      '<div class="field-row"><div class="field"><label for="pf-price">Price</label><div class="price-input"><span class="peso">₱</span><input class="input" id="pf-price" type="number" min="1" step="1" value="' + (l ? l.price : "") + '" placeholder="0" /></div><div class="error-text" data-err="price" hidden></div></div><div class="field"><label for="pf-location">Location</label><select class="select" id="pf-location">' + selectOptions(window.PH_CITIES || [], "Select a city", l ? l.location : null) + '</select><div class="error-text" data-err="location" hidden></div></div></div>' +
+      '<div class="field-row"><div class="field"><label for="pf-price">Price</label><div class="price-input"><span class="peso">₱</span><input class="input" id="pf-price" type="number" min="1" step="1" value="' + (l ? l.price : "") + '" placeholder="0" /></div><div class="error-text" data-err="price" hidden></div></div><div class="field"><label for="pf-location">Location</label><select class="select" id="pf-location">' + locationSelectOptions(l ? l.location : null) + '</select><div class="error-text" data-err="location" hidden></div></div></div>' +
       '<div class="field"><label for="pf-description">Description</label><textarea class="textarea" id="pf-description" maxlength="1200" placeholder="Describe your item...">' + esc(l ? l.description : "") + '</textarea><div class="error-text" data-err="description" hidden></div></div>' +
       '<div class="field"><label>Photos <span class="hint">(up to 5 — optional but recommended)</span></label><label class="dropzone" for="image-input"><svg viewBox="0 0 24 24"><path d="M19 13v6H5v-6H3v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2zM12 2 7 7h3v7h4V7h3l-5-5z"/></svg><div><strong>Click to upload</strong> or drag and drop</div><input id="image-input" type="file" accept="image/*" multiple hidden /></label><div class="image-preview" id="image-preview"></div></div>' +
       '<div class="form-actions"><button class="btn btn-secondary" type="button" data-action="back">Cancel</button><button class="btn btn-primary" type="submit">' + btnText + "</button></div></form></div>";
@@ -238,12 +268,27 @@ window.FALLBACK_IMG =
     renderPreviews();
   }
 
+  // pendingImages holds objects: { previewUrl, url, status }
+  //   previewUrl — local data URL shown instantly while uploading
+  //   url        — the Supabase Storage public URL once uploaded
+  //   status     — "uploading" | "done" | "error"
   function renderPreviews() {
     var box = document.getElementById("image-preview");
     if (!box) return;
-    box.innerHTML = pendingImages.map(function (src, i) { return '<div class="thumb">' + imgTag(src, "Photo " + (i + 1)) + '<button type="button" data-remove-img="' + i + '" aria-label="Remove photo">✕</button></div>'; }).join("");
+    box.innerHTML = pendingImages.map(function (img, i) {
+      var src = img.previewUrl || img.url || window.FALLBACK_IMG;
+      var stateCls = img.status === "uploading" ? " is-uploading" : img.status === "error" ? " is-error" : "";
+      var overlay = img.status === "uploading"
+        ? '<span class="thumb-status"><span class="thumb-spinner" aria-hidden="true"></span></span>'
+        : img.status === "error"
+        ? '<span class="thumb-status thumb-status-error">Upload failed</span>'
+        : "";
+      return '<div class="thumb' + stateCls + '">' + imgTag(src, "Photo " + (i + 1)) + overlay + '<button type="button" data-remove-img="' + i + '" aria-label="Remove photo">✕</button></div>';
+    }).join("");
   }
 
+  // Reads a file, resizes/compresses it on a canvas, and returns both a
+  // data URL (for instant preview) and a JPEG Blob (for upload).
   function resizeImage(file) {
     return new Promise(function (resolve, reject) {
       var reader = new FileReader();
@@ -254,7 +299,11 @@ window.FALLBACK_IMG =
           if (w > h && w > max) { h = Math.round((h * max) / w); w = max; } else if (h >= w && h > max) { w = Math.round((w * max) / h); h = max; }
           var canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h;
           canvas.getContext("2d").drawImage(image, 0, 0, w, h);
-          resolve(canvas.toDataURL("image/jpeg", 0.82));
+          var dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+          canvas.toBlob(function (blob) {
+            if (!blob) { reject(new Error("Could not process image")); return; }
+            resolve({ dataUrl: dataUrl, blob: blob });
+          }, "image/jpeg", 0.82);
         };
         image.onerror = reject; image.src = reader.result;
       };
@@ -268,7 +317,24 @@ window.FALLBACK_IMG =
     var room = 5 - pendingImages.length;
     if (room <= 0) { toast("You can add up to 5 photos."); return; }
     files = files.slice(0, room);
-    Promise.all(files.map(resizeImage)).then(function (urls) { pendingImages = pendingImages.concat(urls); renderPreviews(); }).catch(function () { toast("Sorry, one of those images couldn’t be read."); });
+    files.forEach(function (file) {
+      var entry = { previewUrl: "", url: "", status: "uploading" };
+      pendingImages.push(entry);
+      renderPreviews();
+      resizeImage(file).then(function (out) {
+        entry.previewUrl = out.dataUrl;     // instant preview
+        renderPreviews();
+        return Store.uploadImage(out.blob); // upload in the background
+      }).then(function (publicUrl) {
+        entry.url = publicUrl;
+        entry.status = "done";
+        renderPreviews();
+      }).catch(function (e) {
+        entry.status = "error";
+        renderPreviews();
+        toast((e && e.message) || "Sorry, that photo couldn’t be uploaded.");
+      });
+    });
   }
 
   function removeImage(index) { pendingImages.splice(index, 1); renderPreviews(); }
@@ -282,6 +348,15 @@ window.FALLBACK_IMG =
 
   async function submitPost(form) {
     var editId = form.getAttribute("data-edit-id");
+
+    if (pendingImages.some(function (p) { return p.status === "uploading"; })) {
+      toast("Hang on — your photos are still uploading.");
+      return;
+    }
+    var images = pendingImages
+      .filter(function (p) { return p.status === "done" && p.url; })
+      .map(function (p) { return p.url; });
+
     var data = {
       title: document.getElementById("pf-title").value.trim(),
       category: document.getElementById("pf-category").value,
@@ -289,7 +364,7 @@ window.FALLBACK_IMG =
       condition: document.getElementById("pf-condition").value,
       location: document.getElementById("pf-location").value,
       description: document.getElementById("pf-description").value.trim(),
-      images: pendingImages.slice()
+      images: images
     };
 
     var ok = true;
@@ -790,7 +865,7 @@ window.FALLBACK_IMG =
   }
 
   function clearFilters() {
-    state.search = ""; state.category = "All"; state.sort = "newest";
+    state.search = ""; state.category = "All"; state.location = ""; state.sort = "newest";
     var input = document.getElementById("search-input"); if (input) input.value = "";
     render();
   }
@@ -829,6 +904,8 @@ window.FALLBACK_IMG =
       if (sideItem) { e.preventDefault(); state.activeInquiryId = sideItem.getAttribute("data-inquiry-id"); await render(); return; }
       var tab = e.target.closest(".cat-tab");
       if (tab) { e.preventDefault(); state.category = tab.getAttribute("data-cat"); await render(); return; }
+      var areaPill = e.target.closest(".area-pill");
+      if (areaPill) { e.preventDefault(); state.location = areaPill.getAttribute("data-area"); await render({ scroll: false }); return; }
       var applyJob = e.target.closest('[data-action="apply-job"]');
       if (applyJob) { e.preventDefault(); toast("Thanks for your interest! Email your CV to careers@bayansell.ph 📨"); return; }
     });

@@ -31,6 +31,19 @@ var PH_CITIES = [
 
 var CONDITIONS = ["Brand new", "Like new", "Used"];
 
+// Newport City, Pasay — buildings and landmarks for the local audience.
+// Used both as quick filter pills on Browse and as location options when posting.
+var NEWPORT_AREA = "Newport City, Pasay";
+var NEWPORT_LOCATIONS = [
+  "Newport City",
+  "150 Newport Blvd",
+  "Resorts World Manila",
+  "Newport Mall",
+  "NAIA Terminal 3",
+  "Villamor",
+  "Pasay Rotonda",
+];
+
 // Helper to build an Unsplash URL at a given width.
 function img(id, w) {
   return (
@@ -250,5 +263,44 @@ var SEED_LISTINGS = [
     images: [img("1593359677879-a4bb92f829d1"), img("1461151304267-38535e780c79")],
     seller: { name: "Kim Bautista" },
     postedAt: "2026-06-08T10:55:00+08:00",
+  },
+  {
+    id: "seed-17",
+    title: "iPhone 13 128GB — Midnight",
+    category: "Mobile Phones",
+    price: 31500,
+    condition: "Like new",
+    location: "150 Newport Blvd",
+    description:
+      "Selling my iPhone 13, 128GB Midnight. Battery health 89%, no scratches, always in a case. Complete with box and cable. Upgrading to a new unit. Meet-up at the lobby of 150 Newport Blvd or Newport Mall.",
+    images: [img("1632661674596-df8be070a5c5"), img("1591337676887-a217a6970a8a")],
+    seller: { name: "Mara Villanueva" },
+    postedAt: "2026-06-11T19:10:00+08:00",
+  },
+  {
+    id: "seed-18",
+    title: "IKEA MARKUS Ergonomic Office Chair",
+    category: "Furniture",
+    price: 6500,
+    condition: "Used",
+    location: "Newport City",
+    description:
+      "IKEA MARKUS office chair in dark grey. Super comfy for WFH, mesh back, used for about a year. Minor wear but fully functional. Pick-up only here in Newport City — I can help bring it down to the lobby.",
+    images: [img("1580480055273-228ff5388ef8"), img("1505797149-0b0a1b1b1b1b")],
+    seller: { name: "Joco Fernandez" },
+    postedAt: "2026-06-11T15:40:00+08:00",
+  },
+  {
+    id: "seed-19",
+    title: "Nintendo Switch OLED — White",
+    category: "Hobbies & Games",
+    price: 14500,
+    condition: "Like new",
+    location: "Resorts World Manila",
+    description:
+      "Nintendo Switch OLED (white), barely used. Includes dock, Joy-Cons, and a carrying case with 2 games (Mario Kart 8, Zelda). Selling because I rarely have time to play. Meet-up around Resorts World Manila / Newport area.",
+    images: [img("1606813907291-d86efa9b94db"), img("1578303512597-81e6cc155b3e")],
+    seller: { name: "Migi Santos" },
+    postedAt: "2026-06-11T12:05:00+08:00",
   },
 ];

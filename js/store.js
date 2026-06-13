@@ -135,6 +135,26 @@ var Store = (function () {
     }
   }
 
+  /* ---------- Image uploads (Supabase Storage) ---------- */
+
+  // Uploads a compressed image blob to the listing-images bucket under the
+  // current user's folder and returns its public URL.
+  async function uploadImage(blob) {
+    const user = await getSessionUser();
+    if (!user) throw new Error("Log in to upload photos.");
+
+    const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const path = user.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 9) + '.' + ext;
+
+    const { error } = await window.supabaseClient.storage
+      .from('listing-images')
+      .upload(path, blob, { contentType: blob.type || 'image/jpeg', cacheControl: '3600', upsert: false });
+    if (error) throw error;
+
+    const { data } = window.supabaseClient.storage.from('listing-images').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   async function addListing(data) {
     const user = await getSessionUser();
     if (!user) throw new Error("Log in to post.");
@@ -392,6 +412,7 @@ var Store = (function () {
     getUserListings,
     getAllListings,
     getById,
+    uploadImage,
     addListing,
     updateListing,
     deleteListing,
