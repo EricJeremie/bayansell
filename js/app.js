@@ -254,7 +254,9 @@ window.FALLBACK_IMG =
           if (w > h && w > max) { h = Math.round((h * max) / w); w = max; } else if (h >= w && h > max) { w = Math.round((w * max) / h); h = max; }
           var canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h;
           canvas.getContext("2d").drawImage(image, 0, 0, w, h);
-          resolve(canvas.toDataURL("image/jpeg", 0.82));
+          canvas.toBlob(function(blob) {
+            resolve({ blob: blob, dataUrl: canvas.toDataURL("image/jpeg", 0.82) });
+          }, "image/jpeg", 0.82);
         };
         image.onerror = reject; image.src = reader.result;
       };
@@ -262,13 +264,24 @@ window.FALLBACK_IMG =
     });
   }
 
-  function handleFiles(fileList) {
+  async function handleFiles(fileList) {
     var files = Array.prototype.slice.call(fileList).filter(function (f) { return /^image\//.test(f.type); });
     if (!files.length) return;
     var room = 5 - pendingImages.length;
     if (room <= 0) { toast("You can add up to 5 photos."); return; }
     files = files.slice(0, room);
-    Promise.all(files.map(resizeImage)).then(function (urls) { pendingImages = pendingImages.concat(urls); renderPreviews(); }).catch(function () { toast("Sorry, one of those images couldn’t be read."); });
+
+    toast("Uploading photos...");
+    try {
+      const results = await Promise.all(files.map(resizeImage));
+      const urls = await Promise.all(results.map(res => Store.uploadImage(res.blob)));
+      pendingImages = pendingImages.concat(urls);
+      renderPreviews();
+      toast("Photos uploaded!");
+    } catch (err) {
+      console.error(err);
+      toast("Sorry, there was an error uploading your photos.");
+    }
   }
 
   function removeImage(index) { pendingImages.splice(index, 1); renderPreviews(); }
@@ -300,14 +313,20 @@ window.FALLBACK_IMG =
     setError("price", priceMsg); if (priceMsg) ok = false;
     setError("condition", data.condition ? "" : "Please choose a condition."); if (!data.condition) ok = false;
     setError("location", data.location ? "" : "Please choose a location."); if (!data.location) ok = false;
-    setError("description", data.description ? "" : "Please add a short description."); if (!data.description) ok = false;
+    setError("setError", data.description ? "" : "Please add a short description."); if (!data.description) ok = false;
 
     if (!ok) { var firstErr = form.querySelector(".input-error"); if (firstErr) firstErr.focus(); toast("Please fix the highlighted fields."); return; }
+
+    var btn = form.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.textContent = editId ? "Saving..." : "Posting..."; }
 
     try {
       if (editId) { await Store.updateListing(editId, data); toast("Changes saved! ✨"); location.hash = "#/dashboard"; }
       else { var listing = await Store.addListing(data); toast("Your item is now live! 🎉"); location.hash = "#/item/" + listing.id; }
-    } catch (e) { toast(e.message || "Could not save your item."); }
+    } catch (e) { 
+      toast(e.message || "Could not save your item."); 
+      if (btn) { btn.disabled = false; btn.textContent = editId ? "Save changes" : "Post item"; }
+    }
   }
 
   /* ---------------------------- Favorites -------------------------- */
@@ -552,7 +571,7 @@ window.FALLBACK_IMG =
   var ICON_FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
   var ICON_MAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>';
   var ICON_HEART2 = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.4-7 10-7 10z"/></svg>';
-  var ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg>';
+  var ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6 18.4 18.4M18.4 5.6 5.6 18.4"/>';
   var ICON_SPARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/></svg>';
 
   function featureGridHTML(items) {
