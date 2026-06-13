@@ -14,6 +14,7 @@ var CATEGORIES = [
   "Hobbies & Games",
   "Sports",
   "Books",
+  "Food",
 ];
 
 var PH_CITIES = [
@@ -40,7 +41,7 @@ var NEWPORT_LOCATIONS = [
   "Resorts World Manila",
   "Newport Mall",
   "NAIA Terminal 3",
-  "Villamor",
+  "Villamor Air Base",
   "Pasay Rotonda",
 ];
 
