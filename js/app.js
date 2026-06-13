@@ -214,7 +214,7 @@ window.FALLBACK_IMG =
     var sellerMeta = l.isMine ? "This is your listing" : "Member · Bayansell";
 
     var primaryAction = l.isMine ? '<button class="btn btn-primary btn-block" type="button" data-action="edit" data-id="' + esc(l.id) + '">Edit listing</button>' : '<button class="btn btn-primary btn-block" type="button" data-action="contact" data-id="' + esc(l.id) + '">Message seller</button>';
-    var actionsHTML = primaryAction + (l.isMine ? '<button class="btn btn-secondary btn-block" type="button" data-delete="' + esc(l.id) + '">Delete listing</button>' : '') + '<button class="btn btn-secondary btn-block" type="button" data-fav="' + esc(l.id) + '">' + (isFav ? "♥ Saved" : "♡ Save item") + "</button>" + '<button class="btn btn-secondary btn-block" type="button" data-action="share" data-id="' + esc(l.id) + '">Share</button>';
+    var actionsHTML = primaryAction + (l.isMine ? '<button class="btn btn-secondary btn-block" type="button" data-delete="' + esc(l.id) + '">Delete listing</button>' : '') + '<button class="btn btn-secondary btn-block' + favCls + '" type="button" data-fav="' + esc(l.id) + '">' + HEART_SVG + "<span>" + (isFav ? "Saved" : "Save item") + "</span></button>" + '<button class="btn btn-secondary btn-block" type="button" data-action="share" data-id="' + esc(l.id) + '">Share</button>';
 
     app.innerHTML = '<div class="detail"><button class="back-link" type="button" data-action="back">' + BACK_SVG + " Back</button><div class=\"detail-head\"><div><h1 class=\"detail-title\">" + esc(l.title) + "</h1><div class=\"detail-sub\">" + esc(l.category) + " · " + esc(l.location) + " · Posted " + formatDateRel(l.postedAt) + "</div></div><button class=\"detail-save" + favCls + "\" type=\"button\" data-fav=\"" + esc(l.id) + "\">" + HEART_SVG + "<span>" + (isFav ? "Saved" : "Save") + "</span></button></div>" +
       galleryHTML(l.images) +
@@ -379,10 +379,16 @@ window.FALLBACK_IMG =
 
     if (!ok) { var firstErr = form.querySelector(".input-error"); if (firstErr) firstErr.focus(); toast("Please fix the highlighted fields."); return; }
 
+    var btn = form.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.textContent = editId ? "Saving..." : "Posting..."; }
+
     try {
       if (editId) { await Store.updateListing(editId, data); toast("Changes saved! ✨"); location.hash = "#/dashboard"; }
       else { var listing = await Store.addListing(data); toast("Your item is now live! 🎉"); location.hash = "#/item/" + listing.id; }
-    } catch (e) { toast(e.message || "Could not save your item."); }
+    } catch (e) { 
+      toast(e.message || "Could not save your item."); 
+      if (btn) { btn.disabled = false; btn.textContent = editId ? "Save changes" : "Post item"; }
+    }
   }
 
   /* ---------------------------- Favorites -------------------------- */
