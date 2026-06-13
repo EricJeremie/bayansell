@@ -38,6 +38,11 @@ var NEWPORT_AREA = "Newport City, Pasay";
 var NEWPORT_LOCATIONS = [
   "Newport City",
   "150 Newport Blvd",
+  "Sarasota",
+  "Pinecrest",
+  "Montecito",
+  "One Palm Villas",
+  "Two Palm Villas",
   "Resorts World Manila",
   "Newport Mall",
   "NAIA Terminal 3",
