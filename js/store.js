@@ -30,6 +30,29 @@ var Store = (function () {
     }
   }
 
+  /* ---------- Storage ---------- */
+
+  async function uploadImage(file) {
+    const user = await getSessionUser();
+    if (!user) throw new Error("Log in to upload images.");
+
+    const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
+    const fileName = `${user.id}-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await window.supabaseClient.storage
+      .from('listing-images')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = window.supabaseClient.storage
+      .from('listing-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  }
+
   /* ---------- Listings ---------- */
 
   async function getAllListings() {
@@ -398,6 +421,7 @@ var Store = (function () {
     getInquiries,
     createInquiry,
     sendMessage,
+    uploadImage,
     getUser: getSessionUser,
     login,
     signup,
