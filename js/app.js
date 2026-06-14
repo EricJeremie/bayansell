@@ -1,5 +1,5 @@
 /* =========================================================
-   Bayansell — app (router, views, interactions)
+   GoNegosyo — app (router, views, interactions)
    Refactored for Asynchronous Supabase Store
    ========================================================= */
 
@@ -212,7 +212,7 @@ window.FALLBACK_IMG =
     var isFav = false;
     try { isFav = await Store.isFavorite(id); } catch(e) {}
     var favCls = isFav ? " is-fav" : "";
-    var sellerMeta = l.isMine ? "This is your listing" : "Member · Bayansell";
+    var sellerMeta = l.isMine ? "This is your listing" : "Member · GoNegosyo";
 
     var primaryAction = l.isMine ? '<button class="btn btn-primary btn-block" type="button" data-action="edit" data-id="' + esc(l.id) + '">Edit listing</button>' : '<button class="btn btn-primary btn-block" type="button" data-action="contact" data-id="' + esc(l.id) + '">Message seller</button>';
     var actionsHTML = primaryAction + (l.isMine ? '<button class="btn btn-secondary btn-block" type="button" data-delete="' + esc(l.id) + '">Delete listing</button>' : '') + '<button class="btn btn-secondary btn-block' + favCls + '" type="button" data-fav="' + esc(l.id) + '">' + HEART_SVG + "<span>" + (isFav ? "Saved" : "Save item") + "</span></button>" + '<button class="btn btn-secondary btn-block" type="button" data-action="share" data-id="' + esc(l.id) + '">Share</button>';
@@ -247,8 +247,8 @@ window.FALLBACK_IMG =
   async function renderPost(editId) {
     var user = null;
     try { user = await Store.getUser(); } catch(e) {}
-    if (!user) { app.innerHTML = '<div class="empty"><div class="emoji">🔐</div><h2>Log in to start selling</h2><p>Create an account or log in to post your item on Bayansell.</p><button class="btn btn-primary" type="button" data-action="login-inline">Log in or sign up</button></div>'; return; }
-    if (user.role !== "seller") { app.innerHTML = '<div class="empty"><div class="emoji">💼</div><h2>Want to sell on Bayansell?</h2><p>You are currently browsing as a buyer. Upgrade to a seller account to post listings.</p><button class="btn btn-primary" type="button" data-action="upgrade-seller">Become a Seller</button></div>'; return; }
+    if (!user) { app.innerHTML = '<div class="empty"><div class="emoji">🔐</div><h2>Log in to start selling</h2><p>Create an account or log in to post your item on GoNegosyo.</p><button class="btn btn-primary" type="button" data-action="login-inline">Log in or sign up</button></div>'; return; }
+    if (user.role !== "seller") { app.innerHTML = '<div class="empty"><div class="emoji">💼</div><h2>Want to sell on GoNegosyo?</h2><p>You are currently browsing as a buyer. Upgrade to a seller account to post listings.</p><button class="btn btn-primary" type="button" data-action="upgrade-seller">Become a Seller</button></div>'; return; }
 
     var l = null;
     if (editId) { try { l = await Store.getById(editId); } catch(e) {} }
@@ -445,11 +445,11 @@ window.FALLBACK_IMG =
       (isLogin ? "" : '<div class="field"><label for="auth-role">I want to...</label><select class="select" id="auth-role"><option value="buyer">Buy and browse</option><option value="seller">Sell items</option></select></div>');
 
     var overlay = openModal(isLogin ? "Log in" : "Sign up",
-      "<h2>Welcome to Bayansell</h2><p class=\"modal-sub\">" + (isLogin ? "Log in to sell your items and message sellers." : "Create an account to sell your items and message sellers.") + "</p>" +
+      "<h2>Welcome to GoNegosyo</h2><p class=\"modal-sub\">" + (isLogin ? "Log in to sell your items and message sellers." : "Create an account to sell your items and message sellers.") + "</p>" +
       '<form id="auth-form" novalidate>' + fields +
       '<div class="error-text" data-err="auth-form" hidden style="margin-bottom:12px"></div>' +
       '<button class="btn btn-primary btn-block" type="submit" id="auth-submit">' + (isLogin ? "Log in" : "Create account") + '</button></form>' +
-      '<p class="modal-sub" style="margin-top:14px;text-align:center">' + (isLogin ? 'New to Bayansell? <button type="button" class="link-btn" data-auth-switch="signup">Sign up</button>' : 'Already have an account? <button type="button" class="link-btn" data-auth-switch="login">Log in</button>') + "</p>");
+      '<p class="modal-sub" style="margin-top:14px;text-align:center">' + (isLogin ? 'New to GoNegosyo? <button type="button" class="link-btn" data-auth-switch="signup">Sign up</button>' : 'Already have an account? <button type="button" class="link-btn" data-auth-switch="login">Log in</button>') + "</p>");
 
     overlay.querySelector("[data-auth-switch]").addEventListener("click", function () {
       openAuthModal(afterAuth, this.getAttribute("data-auth-switch"));
@@ -659,7 +659,7 @@ window.FALLBACK_IMG =
     "how-it-works": {
       title: "How it works",
       build: function () {
-        return pageHeroHTML("Getting started", "How Bayansell works", "Buy and sell preloved and brand-new items with people across the Philippines — in just a few taps.") +
+        return pageHeroHTML("Getting started", "How GoNegosyo works", "Buy and sell preloved and brand-new items with people across the Philippines — in just a few taps.") +
           '<section class="page-section"><h2>For buyers</h2>' +
           stepsHTML([
             { title: "Browse and search", body: "Explore thousands of listings by category, location, or keyword. Tap the heart to save items you like for later." },
@@ -672,7 +672,7 @@ window.FALLBACK_IMG =
             { title: "Post your item", body: "Add clear photos, an honest description, a fair price, and your location. Good listings sell faster." },
             { title: "Reply and close the deal", body: "Respond to buyer inquiries from your dashboard, arrange a safe meet-up, and mark it sold." },
           ]) + '</section>' +
-          '<section class="page-section"><h2>Why Bayansell</h2>' +
+          '<section class="page-section"><h2>Why GoNegosyo</h2>' +
           featureGridHTML([
             { icon: ICON_CASH, title: "No listing fees", body: "Post as many items as you like for free. Keep 100% of what you earn." },
             { icon: ICON_PIN, title: "Local first", body: "Find deals near you across Manila, Cebu, Davao, and the rest of the Philippines." },
@@ -685,13 +685,13 @@ window.FALLBACK_IMG =
     "safety": {
       title: "Safety tips",
       build: function () {
-        return pageHeroHTML("Trust & safety", "Stay safe on Bayansell", "A few simple habits keep buying and selling smooth and worry-free. Please read these before your first meet-up.") +
+        return pageHeroHTML("Trust & safety", "Stay safe on GoNegosyo", "A few simple habits keep buying and selling smooth and worry-free. Please read these before your first meet-up.") +
           '<section class="page-section">' +
           featureGridHTML([
             { icon: ICON_PIN, title: "Meet in public", body: "Always meet in a busy public place — a mall, coffee shop, or official MRT/LRT meet-up point. Bring a friend if you can." },
             { icon: ICON_EYE, title: "Inspect before you pay", body: "Check the item carefully and test that it works. Only hand over payment once you're fully satisfied." },
             { icon: ICON_CASH, title: "Be careful with payments", body: "Prefer cash on meet-up. Avoid sending deposits or GCash to people you haven't met. Never share OTPs or card details." },
-            { icon: ICON_CHAT, title: "Keep chats on Bayansell", body: "Message through the app so there's a record. Be wary of anyone rushing you to move off-platform." },
+            { icon: ICON_CHAT, title: "Keep chats on GoNegosyo", body: "Message through the app so there's a record. Be wary of anyone rushing you to move off-platform." },
             { icon: ICON_FLAG, title: "Spot the red flags", body: "Prices that seem too good to be true, requests for upfront fees, or sob stories are classic scam signs. Trust your gut." },
             { icon: ICON_SHIELD, title: "Report problems", body: "If something feels off, stop the deal and report the user. Helping us flag bad actors keeps the community safe." },
           ]) + '</section>' +
@@ -708,12 +708,12 @@ window.FALLBACK_IMG =
           faqHTML([
             { q: "How do I contact a seller?", a: "Open any listing and tap “Message seller.” You'll need to be logged in. Your conversation appears in the seller's dashboard and they can reply right there." },
             { q: "How do I save items for later?", a: "Tap the heart icon on any listing to add it to your Saved items. You can find everything you've saved from the Saved link in the header." },
-            { q: "Is there buyer protection?", a: "Bayansell is a community marketplace for in-person deals, so we don't process payments. Follow our safety tips: meet in public, inspect the item, and pay only when you're happy." },
+            { q: "Is there buyer protection?", a: "GoNegosyo is a community marketplace for in-person deals, so we don't process payments. Follow our safety tips: meet in public, inspect the item, and pay only when you're happy." },
           ]) + '</section>' +
           '<section class="page-section"><h2>Selling</h2>' +
           faqHTML([
             { q: "How do I start selling?", a: "Log in, open the profile menu, and choose “Become a Seller” (or switch to a seller account). Then tap “Sell your item” to post your first listing." },
-            { q: "How much does it cost to list?", a: "Listing on Bayansell is completely free. There are no listing fees and no commissions — you keep everything you earn." },
+            { q: "How much does it cost to list?", a: "Listing on GoNegosyo is completely free. There are no listing fees and no commissions — you keep everything you earn." },
             { q: "How many photos can I add?", a: "You can add up to 5 photos per listing. Clear, well-lit photos from multiple angles help your item sell much faster." },
             { q: "How do I edit or delete a listing?", a: "Go to your seller dashboard, find the item under “Manage Listings,” and use the edit or delete buttons. You can also edit from the listing page itself." },
           ]) + '</section>' +
@@ -730,9 +730,9 @@ window.FALLBACK_IMG =
     "about": {
       title: "Our story",
       build: function () {
-        return pageHeroHTML("About us", "Our story", "Bayansell started with a simple idea: make it easy for Filipinos to buy and sell with the people around them.") +
-          '<section class="page-section page-prose"><p>The name <strong>Bayansell</strong> blends <em>bayan</em> — community, town, nation — with the simple act of selling. That\'s the heart of what we do: helping neighbors give preloved items a second life and discover great finds close to home.</p>' +
-          '<p>Too often, good stuff ends up forgotten in closets or thrown away while someone nearby is looking for exactly that. We built Bayansell to close that gap — a friendly, local-first marketplace where a fair deal is only a few taps away, from Baguio to Davao.</p></section>' +
+        return pageHeroHTML("About us", "Our story", "GoNegosyo started with a simple idea: make it easy for Filipinos to buy and sell with the people around them.") +
+          '<section class="page-section page-prose"><p>The name <strong>GoNegosyo</strong> comes from <em>negosyo</em> — the Filipino word for business or enterprise. That\'s the heart of what we do: helping Filipinos turn what they have into income, find great deals nearby, and grow a little hustle of their own.</p>' +
+          '<p>Too often, good stuff ends up forgotten in closets or thrown away while someone nearby is looking for exactly that. We built GoNegosyo to close that gap — a friendly, local-first marketplace where a fair deal is only a few taps away, from Baguio to Davao.</p></section>' +
           '<section class="page-section"><div class="story-stats"><div class="story-stat"><span class="story-num">10</span><span class="story-label">cities and growing</span></div><div class="story-stat"><span class="story-num">₱0</span><span class="story-label">listing fees, always</span></div><div class="story-stat"><span class="story-num">100%</span><span class="story-label">made in the Philippines</span></div></div></section>' +
           '<section class="page-section"><h2>What we believe</h2>' +
           featureGridHTML([
@@ -753,7 +753,7 @@ window.FALLBACK_IMG =
           { role: "Community & Trust Lead", team: "Operations", type: "Full-time", place: "Remote (PH)" },
           { role: "Customer Support Specialist", team: "Support", type: "Full-time", place: "Cebu / Hybrid" },
         ];
-        return pageHeroHTML("Careers", "Build Bayansell with us", "We're a small, ambitious team on a mission to help every Filipino buy and sell with their community. Come help us grow.") +
+        return pageHeroHTML("Careers", "Build GoNegosyo with us", "We're a small, ambitious team on a mission to help every Filipino buy and sell with their community. Come help us grow.") +
           '<section class="page-section"><h2>Why work here</h2>' +
           featureGridHTML([
             { icon: ICON_GLOBE, title: "Remote-friendly", body: "Work from anywhere in the Philippines, with hybrid options in Metro Manila and Cebu." },
@@ -775,7 +775,7 @@ window.FALLBACK_IMG =
         return pageHeroHTML("Contact us", "Get in touch", "Questions, feedback, or a partnership idea? We'd love to hear from you.") +
           '<section class="page-section"><div class="contact-grid">' +
           '<aside class="contact-methods">' +
-          '<div class="contact-method"><div class="feature-icon">' + ICON_MAIL + '</div><div><h3>Email</h3><p>support@bayansell.ph</p></div></div>' +
+          '<div class="contact-method"><div class="feature-icon">' + ICON_MAIL + '</div><div><h3>Email</h3><p>support@gonegosyo.ph</p></div></div>' +
           '<div class="contact-method"><div class="feature-icon">' + ICON_CHAT + '</div><div><h3>Help center</h3><p><a href="#/help" class="inline-link">Browse common questions</a></p></div></div>' +
           '<div class="contact-method"><div class="feature-icon">' + ICON_PIN + '</div><div><h3>Office</h3><p>Makati City, Metro Manila</p></div></div>' +
           '<div class="contact-method"><div class="feature-icon">' + ICON_SHIELD + '</div><div><h3>Safety concern?</h3><p><a href="#/safety" class="inline-link">Read our safety tips</a></p></div></div>' +
@@ -914,7 +914,7 @@ window.FALLBACK_IMG =
       var areaPill = e.target.closest(".area-pill");
       if (areaPill) { e.preventDefault(); state.location = areaPill.getAttribute("data-area"); await render({ scroll: false }); return; }
       var applyJob = e.target.closest('[data-action="apply-job"]');
-      if (applyJob) { e.preventDefault(); toast("Thanks for your interest! Email your CV to careers@bayansell.ph 📨"); return; }
+      if (applyJob) { e.preventDefault(); toast("Thanks for your interest! Email your CV to careers@gonegosyo.ph 📨"); return; }
     });
 
     app.addEventListener("change", function (e) {

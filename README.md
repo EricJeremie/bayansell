@@ -1,8 +1,8 @@
-# Bayansell
+# GoNegosyo
 
 An Airbnb-style marketplace where people can **post their items** and **browse listings** from others across the Philippines. Buy and sell preloved and brand-new finds.
 
-**Live:** https://bayansell.vercel.app
+**Live:** https://gonegosyo.vercel.app
 
 ## Features
 
@@ -48,7 +48,7 @@ but actually sending email needs an email provider. It uses [Resend](https://res
 2. Set it as a function secret:
    `supabase secrets set RESEND_API_KEY=re_xxx` (or in the Supabase dashboard → Edge Functions → Secrets).
 3. To email real users (not just your own address), verify a sending domain in Resend and set
-   `NOTIFY_FROM="Bayansell <alerts@yourdomain.com>"`.
+   `NOTIFY_FROM="GoNegosyo <alerts@yourdomain.com>"`.
 
 Until `RESEND_API_KEY` is set, the function safely no-ops and logs who it *would* have emailed.
 

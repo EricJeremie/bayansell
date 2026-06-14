@@ -1,5 +1,5 @@
 /* =========================================================
-   Bayansell — seed data
+   GoNegosyo — seed data
    Exposes globals: CATEGORIES, PH_CITIES, CONDITIONS, SEED_LISTINGS
    ========================================================= */
 

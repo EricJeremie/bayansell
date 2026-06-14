@@ -1,4 +1,4 @@
-// Sends an email to the recipient of a new Bayansell message.
+// Sends an email to the recipient of a new GoNegosyo message.
 // Invoked by a Postgres trigger (pg_net) after a row is inserted into
 // public.messages. Looks up the conversation, figures out who should be
 // notified (the participant who did NOT send the message), and emails them
@@ -10,8 +10,8 @@
 //
 // Required/optional secrets (set with: supabase secrets set KEY=value):
 //   RESEND_API_KEY  (required to actually send) — https://resend.com
-//   NOTIFY_FROM     (optional) e.g. "Bayansell <alerts@yourdomain.com>"
-//   APP_URL         (optional) defaults to https://bayansell.vercel.app
+//   NOTIFY_FROM     (optional) e.g. "GoNegosyo <alerts@yourdomain.com>"
+//   APP_URL         (optional) defaults to https://gonegosyo.vercel.app
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
 
     const { data: senderProfile } = await admin
       .from('profiles').select('full_name').eq('id', msg.sender_id).single();
-    const senderName = senderProfile?.full_name || 'A Bayansell user';
+    const senderName = senderProfile?.full_name || 'A GoNegosyo user';
 
     const { data: recipientUser } = await admin.auth.admin.getUserById(recipientId);
     const recipientEmail = recipientUser?.user?.email;
@@ -70,8 +70,8 @@ Deno.serve(async (req) => {
       return json({ skipped: 'RESEND_API_KEY not set', recipientEmail, senderName, listingTitle });
     }
 
-    const from = Deno.env.get('NOTIFY_FROM') || 'Bayansell <onboarding@resend.dev>';
-    const appUrl = Deno.env.get('APP_URL') || 'https://bayansell.vercel.app';
+    const from = Deno.env.get('NOTIFY_FROM') || 'GoNegosyo <onboarding@resend.dev>';
+    const appUrl = Deno.env.get('APP_URL') || 'https://gonegosyo.vercel.app';
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND}`, 'Content-Type': 'application/json' },
@@ -81,10 +81,10 @@ Deno.serve(async (req) => {
         subject: `New message about ${listingTitle}`,
         html:
           `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px">` +
-          `<h2 style="color:#2563eb">You have a new message on Bayansell</h2>` +
+          `<h2 style="color:#1c3673">You have a new message on GoNegosyo</h2>` +
           `<p><strong>${escapeHtml(senderName)}</strong> messaged you about <strong>${escapeHtml(listingTitle)}</strong>:</p>` +
-          `<blockquote style="border-left:3px solid #2563eb;margin:0;padding:8px 14px;color:#444">${escapeHtml(preview)}</blockquote>` +
-          `<p><a href="${appUrl}/#/dashboard" style="display:inline-block;margin-top:12px;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Open your dashboard to reply</a></p>` +
+          `<blockquote style="border-left:3px solid #1c3673;margin:0;padding:8px 14px;color:#444">${escapeHtml(preview)}</blockquote>` +
+          `<p><a href="${appUrl}/#/dashboard" style="display:inline-block;margin-top:12px;background:#1c3673;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Open your dashboard to reply</a></p>` +
           `</div>`,
       }),
     });

@@ -1,5 +1,5 @@
 /* =========================================================
-   Bayansell — store (Supabase Cloud Layer)
+   GoNegosyo — store (Supabase Cloud Layer)
    ========================================================= */
 
 var Store = (function () {
